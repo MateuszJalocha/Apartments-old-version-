@@ -8,6 +8,7 @@ from collections import defaultdict
 from datetime import datetime
 import concurrent.futures
 import numpy as np
+import pandas as pd
 MAX_THREADS = 30
 PAGE_NAME = 'https://www.morizon.pl'
 
@@ -77,16 +78,13 @@ class ScrapingMorizon:
         
     #Scraping cities and districts
     def scraping_cities_and_districts_links(self, page):
-        #Connection with global variable
-        global MAX_THREADS
-        
         #Read website, encode and create HTML parser
         soup_cities = self.enterPage_parser(page)
 
         #Extract cities names and links
         cities_names, cities_newest_links = self.extract_idClass(isId = True, to_find = 'locationListChildren',soup = soup_cities, replace = True, replace_to = ["mieszkania", "mieszkania/najnowsze"])
 
-        threads = min(MAX_THREADS, len(cities_newest_links))
+        threads = min(self.max_threads, len(cities_newest_links))
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             results = list(executor.map(self.scraping_districts_links, cities_newest_links))
@@ -95,11 +93,8 @@ class ScrapingMorizon:
     
     #Scraping districts links
     def scraping_districts_links(self,city_link):
-        #Connection with global variables
-        global PAGE_NAME
-        
         #Create city link
-        link = PAGE_NAME + city_link
+        link = self.page_name + city_link
 
         try:
             #Read website, encode and create HTML parser
@@ -124,11 +119,9 @@ class ScrapingMorizon:
     
     #General function to scrape links
     def scraping_all_links(self, func, all_links):
-        #Connection with global variable
-        global MAX_THREADS
         
-        threads = min(MAX_THREADS, len(all_links))
-           
+        threads = min(self.max_threads, len(all_links))
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             results = list(executor.map(func, all_links))
         
@@ -136,11 +129,8 @@ class ScrapingMorizon:
     
     #Scraping pages links
     def scraping_pages_links(self, district_link):
-        #Connection with global variable
-        global PAGE_NAME
-        
         #Create link
-        link = PAGE_NAME + district_link
+        link = self.page_name + district_link
         
         try:
             #Read website, encode and create HTML parser
@@ -177,7 +167,7 @@ class ScrapingMorizon:
         if len(missed_pages) != 0:
             results_pages = np.concatenate([properties for properties in results_pages if (properties != None) & ("page" in properties)], axis=0 )
 
-        missed_pages_list = self.missed_links_all(missed_pages, self.missed_pages_func)
+        missed_pages_list = self.missed_links_all(missed_pages, self.missed_oferts_pages, False)
         results_pages = self.join_missed_with_scraped(missed_pages_list,results_pages)
 
         return self.flatten(results_pages)
@@ -212,29 +202,41 @@ class ScrapingMorizon:
         missed_oferts = [oferts for oferts in results_oferts if "page" in oferts]
         results_oferts = np.concatenate([properties for properties in results_oferts if (properties != None) & ("page" not in properties)], axis=0 )
 
-        missed_oferts_list = self.missed_links_all(missed_oferts,self.missed_oferts_func)
+        missed_oferts_list = self.missed_links_all(missed_oferts,self.missed_oferts_pages, True)
         results_oferts = self.join_missed_with_scraped(missed_oferts_list,results_oferts)
 
         return self.flatten(results_oferts)
     
-    def missed_pages_func(self, links):
+    #Scrape missed oferts and pages links
+    def missed_oferts_pages(self, links, oferts):
         
         links = self.scraping_all_links(self.scraping_oferts_links,links)
-        missed_links = [oferts for oferts in links if "page" not in oferts]
-        return links, missed_links
-    
-    def missed_oferts_func(self, links):
         
-        links = self.scraping_all_links(self.scraping_oferts_links,links)
-        missed_links = [oferts for oferts in links if "page" in oferts]
+        #Assign missed links to variable
+        if oferts:
+            missed_links = [oferts for oferts in links if "page" in oferts]
+        else:
+            missed_links = [oferts for oferts in links if "page" not in oferts]
+        
         return links, missed_links
     
-    def missed_links_all(self, missed_oferts, func):
+    #Scrape missed details links
+    def missed_details_func(self, links, oferts):
+        
+        links = self.scraping_all_links(self.scraping_oferts_details_exceptions,links)
+        
+        #Assign missed links to variable
+        missed_links = [details for details in links if "www.morizon.pl" in details]
+        
+        return links, missed_links
+    
+    #Scrape omitted data until you have scraped all
+    def missed_links_all(self, missed_oferts, func, oferts):
         missed_oferts_list = []
         
+        #If there are some missed links left scrape them
         while len(missed_oferts) != 0:
-            print(len(missed_oferts))
-            missed_scraped, missed_oferts = self.missed_links(missed_oferts)
+            missed_scraped, missed_oferts = func(missed_oferts, oferts)
             missed_oferts_list.append(missed_scraped)
         
         return missed_oferts_list
@@ -252,35 +254,150 @@ class ScrapingMorizon:
             scraped = scraped
             
         return scraped
+    
+     #Get districts and cities links
+    def get_details(self, split_size, oferts = []):
+        
+        #Verify whether user want to specify specific pages
+        if any(oferts):
+            results_oferts = oferts
+        else:
+            results_oferts = self.get_oferts()
+        
+        #Create splits to relieve RAM memory
+        splitted = np.array_split(list(range(0,len(results_oferts))), len(results_oferts)/split_size)
+        splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]]  for elements in splitted]
+        splitted[len(splitted) - 1][1] += 1
+        
+        for split in splitted:
+            results_details = self.scraping_all_links(self.scraping_oferts_details_exceptions,results_oferts[split[0]:split[1]])
+            
+            #Assign to variables missed links and scraped properly
+            missed_details = [details for details in results_details if "www.morizon.pl" in details]
+            results_details = self.flatten([details for details in results_details if (details != None) & ("www.morizon.pl" not in details)])
+            
+            #Scrape missed links and join them to already scraped
+            missed_details_list = self.missed_links_all(missed_details,self.missed_details_func, True)
+            results_details = self.join_missed_with_scraped(missed_details_list,results_details)
+            
+            #Informations for user
+            print("%s splits left" %(len(splitted) - (splitted.index(split) + 1)))
+            print("Tyle jest Does not exist: " + str(len([result for result in results_details if result == "Does not exist"]))
+            
+            #Save scraped details as csv file
+            results_details = [result for result in results_details if (result != "Does not exist") & (result != None)]
+            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
 
 
-morizon_scraper = ScrapingMorizon('https://www.morizon.pl/do-wynajecia/mieszkania','https://www.morizon.pl',30)
+    #Try to connect with ofert link, if it is not possible save link to global list
+    def scraping_oferts_details_exceptions(self,link):
+        try:
+            ofert_infos = self.scraping_oferts_details(link)
+        except:
+            ofert_infos = link
+            
+        return ofert_infos
+    
+    #Scraping details from ofert         
+    def scraping_oferts_details(self,link):
+        #Scrapping details from link
+        ofert_infos = defaultdict(list)
+        soup_details = self.enterPage_parser(link)
+        try:
+            #Title and subtitle
+            title = self.extract_informations(self.soup_find_informations(soup = soup_details,
+                                                                   find_attr = ['div', 'class', 'summaryLocation clearfix row']).findAll("span"))
+               
+            subtitle = self.extract_informations(self.soup_find_informations(soup = soup_details,
+                                                                    find_attr = ['div', 'class', 'summaryTypeTransaction clearfix']))
+            #Basic informations
+            price = self.informations_exists(self.soup_find_informations(soup = soup_details,
+                                                                 find_attr = ['li', 'class', 'paramIconPrice']))
+            priceM2 = self.informations_exists(self.soup_find_informations(soup = soup_details,
+                                                                 find_attr = ['li', 'class', 'paramIconPriceM2']))
+            area = self.informations_exists(self.soup_find_informations(soup = soup_details,
+                                                                 find_attr = ['li', 'class', 'paramIconLivingArea']))
+            rooms = self.informations_exists(self.soup_find_informations(soup = soup_details,
+                                                                    find_attr = ['li', 'class', 'paramIconNumberOfRooms']))
+               
+               
+            #Params
+            params = soup_details.find(class_ = "propertyParams")
+            params_h3 = params.findAll("h3")
+            params_tables = params.findAll("table")
+            params_p = params.findAll("p")
+            
+            #Description
+            description = self.extract_informations(self.soup_find_informations(soup = soup_details,
+                                                                find_attr = ['div', 'class', 'description']),True, "p")
+            soup_details.find("section", attrs={"class": "propertyMap"})
+            
+            #Longitude and Latitude
+            google_map = self.soup_find_informations(soup = soup_details, find_attr = ['div', 'class', 'GoogleMap'])
+            lat = self.spatial_data_exists(google_map, 'data-lat')
+            lng = self.spatial_data_exists(google_map, 'data-lng')
+            
+            #Assign informations to dictionary
+            #ofert_infos["city"] = city_name
+            #ofert_infos["district"] = district.split("najnowsze/")[1].split("/")[1]
+            ofert_infos["title"] = title
+            ofert_infos["subtitle"] = subtitle
+            ofert_infos["price"] = price
+            ofert_infos["priceM2"] = priceM2
+            ofert_infos["area"] = area
+            ofert_infos["rooms"] = rooms
+            ofert_infos["params_h3"] = params_h3
+            ofert_infos["params_tables"] = params_tables
+            ofert_infos["params_p"] = params_p
+            ofert_infos["description"] = description
+            ofert_infos["lat"] = lat
+            ofert_infos["lng"] = lng
+            ofert_infos["link"] = link
+            
+            return(ofert_infos)
+            
+        except:
+            return "Does not exist"
+        
+    #Find in soup with 3 args
+    def soup_find_informations(self,soup, find_attr):
+        return soup.find(find_attr[0], attrs={find_attr[1]: find_attr[2]})
+    
+    #Extract strings from infos founded in soup
+    def extract_informations(self,find_in, find_with_obj = False, obj = None):
+       
+        try:
+            if find_with_obj:
+                return [info_part.string.strip() for info_part in find_in.find_all(obj) if(info_part.string != None)]
+            else:
+                return [info_part.string.strip() for info_part in find_in if(info_part.string != None)]
+        except:
+            return "None"
+    
+    #Verify if basic informations in 'em' tag exists
+    def informations_exists(self, details):
+        try:
+            return self.extract_informations(details.em)
+        except:
+            return "None"
+    
+    #Verify if informations about apartment location exists    
+    def spatial_data_exists(self,data, kind):
+        try:
+            return data[kind]
+        except:
+            return "None"  
 
-now = datetime.now()
-print("now =", now)
-all_pages = morizon_scraper.get_pages()
-now = datetime.now()
-print("now =", now)
 
+morizon_scraper = ScrapingMorizon(page = 'https://www.morizon.pl/do-wynajecia/mieszkania',page_name = 'https://www.morizon.pl',max_threads = 30)
 
 now = datetime.now()
 print("now =", now)
 all_oferts = morizon_scraper.get_oferts()
+morizon_scraper.get_details(split_size = 500, oferts = all_oferts)
 now = datetime.now()
 print("now =", now)
 
-if any([]):
-    print("z")
-#results_properties = np.concatenate([properties for properties in all_pages if (properties != None) & ("page" not in properties)], axis=0 )
 
-for each in all_pages:
-    if len(each) > 1: print(each)
 
-results_oferts = np.concatenate([pages for pages in all_oferts if (pages != None) & (len(pages) == 1)], axis=0)
-
-pipka = []
-for each in all_oferts:
-    try:
-        pipka = np.concatenate([pipka, each], axis=0)
-    except:
-        print(each)
+        
