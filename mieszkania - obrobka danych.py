@@ -7,6 +7,10 @@ Created on Sun Nov 29 11:19:08 2020
 #%%
 import pandas as pd
 
+#import numpy as np
+#from sklearn.impute import KNNImputer
+
+
 #%%
 apartments1 = pd.read_csv('mieszkania506.csv',
                    index_col=0)
@@ -19,7 +23,6 @@ apartments3 = pd.read_csv('mieszkania2534.csv',
 
 apartments = pd.concat([apartments1, apartments2, apartments3],ignore_index=True, axis=0)
 #apartmentss.replace(to_replace=None, value=np.nan)
-#apartments = apartmentss.dropna()
 
 #%%
 def remove_quotation_marks(information_types,apartment_details):
@@ -33,56 +36,35 @@ def remove_quotation_marks(information_types,apartment_details):
     return apartment_details
 
 
-
 def numeric_informations(information_types,apartment_details):
     
-    for information_type in information_types:
-        for index in range(len(apartment_details)):
-            try:
+    for position,information_type in enumerate(information_types):
+        try:  
+            for index in range(len(apartment_details)):
                 apartment_details[information_type][index]=float(apartment_details[information_type][index][0].replace(",","."))
-            except:
-                apartment_details[information_type][index]=None
+        except:
+            if(information_type!=information_types[-1]):
+                information_type=information_types[position+1]
     return apartment_details
-
-def get_string2(information_types,apartment_details):
-    
-    for information_type in information_types:
-        for index in range(len(apartment_details)):
-           if((type(apartment_details[information_type][index])!= float) and (len(apartment_details[information_type][index])==1)):
-               apartment_details[information_type][index]=apartment_details[information_type][index][0]
-           else:
-               apartment_details[information_type][index]=apartment_details[information_type][index]
-        
-    return apartment_details
-
-        
-remove_quotation_marks(apartments.columns, apartments)
-numeric_informations(['area','price','priceM2','rooms'],apartments)
-
-
-#%%
-
-# def convert_numpy_float_to_float(information_types,apartment_details):
-#     for information_type in information_types:
-#         apartment_details[information_type]=[each.item() for each in apartment_details[information_type]]
-         
-#     return apartment_details
 
 def get_string(information_types,apartment_details):
     
-    for information_type in information_types:
-        for index in range(len(apartment_details)):
-            if(type(apartment_details[information_type][index])!= float):
-                apartment_details[information_type][index]=' '.join(map(str, apartment_details[information_type][index]))
-            else:
-                apartment_details[information_type][index]=apartment_details[information_type][index]
-        
+    for position,information_type in enumerate(information_types):
+        try:
+            for index in range(len(apartment_details)):
+                if(type(apartment_details[information_type][index])!= float):
+                    apartment_details[information_type][index]=' '.join(map(str, apartment_details[information_type][index]))
+                else:
+                    apartment_details[information_type][index]=apartment_details[information_type][index]
+        except:
+            if(information_type!=information_types[-1]):
+                information_type=information_types[position+1]
     return apartment_details
-            
-#convert_numpy_float_to_float(['lat','lng'], apartments)
-get_string(apartments[['area', 'description', 'link', 'params_h3', 'params_p', 'params_tables',
-       'price', 'priceM2', 'subtitle', 'title', 'rooms']], apartments)
-
+        
+remove_quotation_marks(apartments.columns, apartments)
+numeric_informations(apartments.columns,apartments)
 get_string(apartments.select_dtypes(exclude=["float"]).columns, apartments)
 
-#%%
+            
+
+
