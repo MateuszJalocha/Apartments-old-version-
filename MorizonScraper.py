@@ -53,11 +53,11 @@ class ScrapingMorizon:
         Scraping oferts links
     get_oferts(pages = []):
         Get districts and cities links
-    missed_oferts_pages(links, oferts):
+    missed_oferts_pages(self, links, oferts):
         Scrape missed oferts and pages links
-    missed_details_func(links, oferts):
+    missed_details_func(self, links, oferts):
         Scrape missed details links
-    missed_links_all(missed_oferts, func, details, oferts = None, func_pages_or_oferts = None):
+    missed_links_all(self, missed_oferts, func, oferts):
         Scrape omitted data until you have scraped all
     join_missed_with_scraped(self, missed, scraped):
         Join missed informations with already scraped
@@ -306,12 +306,12 @@ class ScrapingMorizon:
         list
             scraped elements: details, and links e.g. pages
         """
-        
-        threads = min(self.max_threads, len(all_links))
 
+        threads = min(self.max_threads, len(all_links))
+    
         with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
             results = list(executor.map(func, all_links))
-        
+            
         return results
     
     #Scraping pages links
@@ -466,13 +466,13 @@ class ScrapingMorizon:
         """
         
         links = self.scraping_all_links(func,links)
-        
+
         #Assign missed links to variable
         if oferts:
             missed_links = [oferts for oferts in links if "page" in oferts]
         else:
             missed_links = [oferts for oferts in links if "page" not in oferts]
-        
+
         return links, missed_links
     
     #Scrape missed details links
@@ -500,7 +500,7 @@ class ScrapingMorizon:
         return links, missed_links
     
     #Scrape omitted data until you have scraped all
-    def missed_links_all(self, missed_oferts, func, details, oferts = None, func_pages_or_oferts = None):
+    def missed_links_all(self, missed_oferts, func, details,restriction = 5, oferts = None, func_pages_or_oferts = None):
         """General function to scrape missing links that activates ThreadPoolExecutor until all are scraped
         
         Parameters
@@ -511,6 +511,8 @@ class ScrapingMorizon:
             function which will be activated in ThreadPoolExecutor
         details: boolean
             determines whether the missing links relate to details
+        restriction: int
+            restriction for while loop
         oferts: boolean, default(None)
             determines whether the missing links relate to properties
         func_pages_or_oferts: function, default(None)
@@ -523,15 +525,17 @@ class ScrapingMorizon:
         """
         
         missed_oferts_list = []
+        n_times = 0
         
         #If there are some missed links left scrape them
-        while len(missed_oferts) != 0:
+        while len(missed_oferts) != 0 & n_times <= restriction:
             if(details):    
                 missed_scraped, missed_oferts = func(missed_oferts)
             else:
                 missed_scraped, missed_oferts = func(missed_oferts, oferts,func_pages_or_oferts)
             missed_oferts_list.append(missed_scraped)
-        
+            n_times += 1
+            
         return missed_oferts_list
             
             
@@ -583,10 +587,14 @@ class ScrapingMorizon:
         else:
             results_oferts = self.get_oferts()
         
+
         #Create splits to relieve RAM memory
-        splitted = np.array_split(list(range(0,len(results_oferts))), len(results_oferts)/split_size)
-        splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]]  for elements in splitted]
-        splitted[len(splitted) - 1][1] += 1
+        if(len(results_oferts) < split_size):
+            splitted = range(0, len(results_oferts))
+        else:
+            splitted = np.array_split(list(range(0,len(results_oferts))), len(results_oferts)/split_size)
+            splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]]  for elements in splitted]
+            splitted[len(splitted) - 1][1] += 1
         
         for split in splitted[skip_n_elements:]:
             results_details = self.scraping_all_links(self.scraping_oferts_details_exceptions,results_oferts[split[0]:split[1]])
@@ -596,7 +604,7 @@ class ScrapingMorizon:
             results_details = self.flatten([details for details in results_details if (details != None) & ("www.morizon.pl" not in details)])
             
             #Scrape missed links and join them to already scraped
-            missed_details_list = self.missed_links_all(missed_oferts = missed_details, func = self.missed_details_func, details = True)
+            missed_details_list = self.missed_links_all(missed_oferts = missed_details, func = self.missed_details_func, restriction = 5, details = True)
             results_details = self.join_missed_with_scraped(missed_details_list,results_details)
             
             #Informations for user
@@ -605,10 +613,7 @@ class ScrapingMorizon:
             
             #Save scraped details as csv file
             results_details = [result for result in results_details if (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
-            try:
-                pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
-            except:
-                return results_details
+            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
 
     #Try to connect with ofert link, if it is not possible save link to global list
     def scraping_oferts_details_exceptions(self,link):
@@ -649,7 +654,7 @@ class ScrapingMorizon:
             Information that offer is no longer available
         """
         
-        #Scrapping details from link
+        #Scraping details from link
         ofert_infos = defaultdict(list)
         soup_details = self.enterPage_parser(link)
         try:
@@ -805,10 +810,3 @@ class ScrapingMorizon:
 
 
 morizon_scraper = ScrapingMorizon(page = 'https://www.morizon.pl/do-wynajecia/mieszkania',page_name = 'https://www.morizon.pl',max_threads = 30)
-
-now = datetime.now()
-print("now =", now)
-morizon_scraper.get_details(split_size = 500)
-now = datetime.now()
-print("now =", now)
-     
