@@ -49,18 +49,20 @@ def insert_active_links(conn, dataFrame, split_size = 1000):
     else:
         return "Add correct column names"
 
-def find_link_to_scrape(conn, activeLinks, page_name, split_size = 1000):
+def find_links_to_scrape(conn, activeLinks, page_name, split_size = 1000):
     with conn:
         cursor = conn.cursor()
         links_database = cursor.execute("SELECT * FROM Active_links WHERE [PageName] LIKE '"+page_name+"'")
         links_database = pd.DataFrame.from_records([each for each in links_database])
+        
+        activeLinks = pd.DataFrame({"Link": activeLinks})
+        to_scrape = activeLinks[activeLinks.isin(links_database.iloc[:,2])].dropna()
+        to_remove = links_database.iloc[:,2][~links_database.iloc[:,2].isin(activeLinks["Link"])].dropna()
         cursor.close()
-       
-     activeLinks = pd.DataFrame({"Link": activeLinks})
-     to_scrape = activeLinks.iloc[~activeLinks.isin(links_database.iloc[:,2])].dropna()
-     
-     return to_scrape
+
+    return to_scrape, to_remove
  
 def replace_links(conn, activeLinks, page_name, split_size = 1000):
     return 0
 
+to_scrape, to_remove = find_links_to_scrape(databaseConnection, all_oferts, "Morizon")
