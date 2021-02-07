@@ -8,6 +8,7 @@ from datetime import datetime
 import concurrent.futures
 import numpy as np
 import pandas as pd
+
 MAX_THREADS = 30
 PAGE_NAME = 'https://www.morizon.pl'
 
@@ -809,4 +810,3 @@ class ScrapingMorizon:
             return "None"  
 
 
-morizon_scraper = ScrapingMorizon(page = 'https://www.morizon.pl/do-wynajecia/mieszkania',page_name = 'https://www.morizon.pl',max_threads = 30)

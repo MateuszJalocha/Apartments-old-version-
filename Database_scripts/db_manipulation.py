@@ -239,9 +239,3 @@ class DatabaseManipulation:
         #Delete and replace links
         self.replace_links(newLinks = scrape, removeLinks = remove, page_name = page_name, insert_columns = insert_columns, split_size = split_size)
         
-#Database connection
-config = configparser.ConfigParser() 
-config.read('Mieszkania/Database_scripts/config.ini')
-
-manipulatedata = DatabaseManipulation(config, "DATABASE", "Active_links")
-manipulatedata.push_to_database(activeLinks = zmiana["Link"].to_list(), page_name = "Morizon", insert_columns = ["PageName", "Link"],split_size = 1000)
