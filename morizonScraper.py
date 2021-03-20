@@ -15,7 +15,7 @@ PAGE_NAME = 'https://www.morizon.pl'
 
 class ScrapingMorizon:
     """
-    A class used to scrape oferts from morizon.pl
+    A class used to scrape offers from morizon.pl
 
     ...
 
@@ -50,32 +50,32 @@ class ScrapingMorizon:
         Scraping pages links
     get_pages(districts = []):
         The method called up by the user to download all links of the pages from morizon.pl
-    scraping_oferts_links(page_link):  
-        Scraping oferts links
-    get_oferts(pages = []):
+    scraping_offers_links(page_link):
+        Scraping offers links
+    get_offers(pages = []):
         Get districts and cities links
-    missed_oferts_pages(self, links, oferts):
-        Scrape missed oferts and pages links
-    missed_details_func(self, links, oferts):
+    missed_offers_pages(self, links, offers):
+        Scrape missed offers and pages links
+    missed_details_func(self, links, offers):
         Scrape missed details links
-    missed_links_all(self, missed_oferts, func, oferts):
+    missed_links_all(self, missed_offers, func, offers):
         Scrape omitted data until you have scraped all
     join_missed_with_scraped(self, missed, scraped):
-        Join missed informations with already scraped
-    get_details(self, split_size, oferts = []):
-        Get districts and cities links
-    scraping_oferts_details_exceptions(link):
-        Try to connect with ofert link, if it is not possible save link to global list
-    scraping_oferts_details(link):
-        Scraping details from ofert
-    soup_find_informations(soup, find_attr):
+        Join missed information with already scraped
+    get_details(self, split_size, offers = []):
+        The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
+    scraping_offers_details_exceptions(link):
+        Try to connect with offer link, if it is not possible save link to global list
+    scraping_offers_details(link):
+        Scraping details from offer
+    soup_find_information(soup, find_attr):
         Find in soup with 3 args
-    extract_informations(find_in, find_with_obj = False, obj = None):
+    extract_information(find_in, find_with_obj = False, obj = None):
         Extract strings from infos founded in soup
-    informations_exists(details):
-        Verify if basic informations in 'em' tag exists
+    information_exists(details):
+        Verify if basic information in 'em' tag exists
     spatial_data_exists(data, kind):
-        Verify if informations about apartment location exists   
+        Verify if information about apartment location exists
     """
 
     def __init__(self, page, page_name, max_threads = 30):
@@ -137,7 +137,7 @@ class ScrapingMorizon:
         to_find: str
             name of class or id  
         soup: BeautifulSoup
-            object used to extract informations
+            object used to extract information
         replace: boolean
             determines whether part of the link is to be replaced
         replace_to: list
@@ -339,6 +339,7 @@ class ScrapingMorizon:
              
             #Extract pages numbers and links
             pages_names, pages_newest_links = self.extract_links_idClass(isId = False, to_find = 'nav nav-pills mz-pagination-number', soup = soup_pages,replace = False)
+
             pages_range = self.prepare_range(pages_names)
             
             #Create all pages links
@@ -375,20 +376,19 @@ class ScrapingMorizon:
         results_pages = self.scraping_all_links(self.scraping_pages_links,results_districts)
         results_pages = self.flatten(results_pages)
         
-        missed_pages = [oferts for oferts in results_pages if "page" not in oferts]
+        missed_pages = [offers for offers in results_pages if "page" not in offers]
         
         if len(missed_pages) != 0:
             results_pages = self.flatten([properties for properties in results_pages if (properties != None) & ("page" in properties)])
 
-        missed_pages_list = self.missed_links_all(missed_oferts = missed_pages, func = self.missed_oferts_pages, details = False, oferts = False, func_pages_or_oferts = self.scraping_pages_links)
+        missed_pages_list = self.missed_links_all(missed_offers = missed_pages, func = self.missed_offers_pages, details = False, offers = False, func_pages_or_offers = self.scraping_pages_links)
         results_pages = self.join_missed_with_scraped(missed_pages_list,results_pages)
 
         return self.flatten(results_pages)
-
     
-    #Scraping oferts links
-    def scraping_oferts_links(self, page_link):  
-        """Scraping oferts links
+    #Scraping offers links
+    def scraping_offers_links(self, page_link):
+        """Scraping offers links
 
         Parameters
         ----------
@@ -398,15 +398,15 @@ class ScrapingMorizon:
         Returns
         ------
         list
-            scraped oferts links
+            scraped offers links
         """
         
         try:
             #Read website, encode and create HTML parser
-            soup_oferts = self.enterPage_parser(page_link)
+            soup_offers = self.enterPage_parser(page_link)
                
-            properties_links = soup_oferts.findAll(class_ = "property_link")
-            properties_links = [link.get("href") for link in properties_links if("oferta" in link.get("href"))]
+            properties_links = soup_offers.findAll(class_ = "property_link")
+            properties_links = [link.get("href") for link in properties_links if("offera" in link.get("href"))]
             
             all_properties_links = properties_links
     
@@ -416,7 +416,7 @@ class ScrapingMorizon:
         return all_properties_links
     
     #Get districts and cities links
-    def get_oferts(self, pages = []):
+    def get_offers(self, pages = []):
         """The method called up by the user to download all links of the properties from morizon.pl
 
         Parameters
@@ -436,24 +436,24 @@ class ScrapingMorizon:
         else:
             results_pages = self.get_pages()
             
-        results_oferts = self.scraping_all_links(self.scraping_oferts_links,results_pages)
-        missed_oferts = [oferts for oferts in results_oferts if "page" in oferts]
-        results_oferts = np.concatenate([properties for properties in results_oferts if (properties != None) & ("page" not in properties)], axis=0 )
+        results_offers = self.scraping_all_links(self.scraping_offers_links,results_pages)
+        missed_offers = [offers for offers in results_offers if "page" in offers]
+        results_offers = np.concatenate([properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0 )
 
-        missed_oferts_list = self.missed_links_all(missed_oferts = missed_oferts, func = self.missed_oferts_pages, details = False, oferts = True, func_pages_or_oferts = self.scraping_oferts_links)
-        results_oferts = self.join_missed_with_scraped(missed_oferts_list,results_oferts)
+        missed_offers_list = self.missed_links_all(missed_offers = missed_offers, func = self.missed_offers_pages, details = False, offers = True, func_pages_or_offers = self.scraping_offers_links)
+        results_offers = self.join_missed_with_scraped(missed_offers_list,results_offers)
 
-        return self.flatten(results_oferts)
+        return self.flatten(results_offers)
     
-    #Scrape missed oferts and pages links
-    def missed_oferts_pages(self, links, oferts, func):
-        """Scrape missed oferts and pages links
+    #Scrape missed offers and pages links
+    def missed_offers_pages(self, links, offers, func):
+        """Scrape missed offers and pages links
 
         Parameters
         ----------
         links: list
             missing links
-        oferts: boolean
+        offers: boolean
             determines whether the missing links relate to properties
         func: function
             function which will be activated in ThreadPoolExecutor
@@ -469,10 +469,10 @@ class ScrapingMorizon:
         links = self.scraping_all_links(func,links)
 
         #Assign missed links to variable
-        if oferts:
-            missed_links = [oferts for oferts in links if "page" in oferts]
+        if offers:
+            missed_links = [offers for offers in links if "page" in offers]
         else:
-            missed_links = [oferts for oferts in links if "page" not in oferts]
+            missed_links = [offers for offers in links if "page" not in offers]
 
         return links, missed_links
     
@@ -493,7 +493,7 @@ class ScrapingMorizon:
             links that are still missing
         """
         
-        links = self.scraping_all_links(self.scraping_oferts_details_exceptions,links)
+        links = self.scraping_all_links(self.scraping_offers_details_exceptions,links)
         
         #Assign missed links to variable
         missed_links = [details for details in links if "www.morizon.pl" in details]
@@ -501,12 +501,12 @@ class ScrapingMorizon:
         return links, missed_links
     
     #Scrape omitted data until you have scraped all
-    def missed_links_all(self, missed_oferts, func, details,restriction = 5, oferts = None, func_pages_or_oferts = None):
+    def missed_links_all(self, missed_offers, func, details,restriction = 5, offers = None, func_pages_or_offers = None):
         """General function to scrape missing links that activates ThreadPoolExecutor until all are scraped
         
         Parameters
         ----------
-        missed_oferts: list
+        missed_offers: list
             missing links
         func: function
             function which will be activated in ThreadPoolExecutor
@@ -514,10 +514,10 @@ class ScrapingMorizon:
             determines whether the missing links relate to details
         restriction: int
             restriction for while loop
-        oferts: boolean, default(None)
+        offers: boolean, default(None)
             determines whether the missing links relate to properties
-        func_pages_or_oferts: function, default(None)
-            function to scrape pages or oferts
+        func_pages_or_offers: function, default(None)
+            function to scrape pages or offers
             
         Returns
         ------
@@ -525,24 +525,23 @@ class ScrapingMorizon:
             scraped elements: details, and links e.g. pages
         """
         
-        missed_oferts_list = []
+        missed_offers_list = []
         n_times = 0
         
         #If there are some missed links left scrape them
-        while len(missed_oferts) != 0 & n_times <= restriction:
+        while len(missed_offers) != 0 & n_times <= restriction:
             if(details):    
-                missed_scraped, missed_oferts = func(missed_oferts)
+                missed_scraped, missed_offers = func(missed_offers)
             else:
-                missed_scraped, missed_oferts = func(missed_oferts, oferts,func_pages_or_oferts)
-            missed_oferts_list.append(missed_scraped)
+                missed_scraped, missed_offers = func(missed_offers, offers,func_pages_or_offers)
+            missed_offers_list.append(missed_scraped)
             n_times += 1
             
-        return missed_oferts_list
+        return missed_offers_list
             
-            
-    #Join missed informations with already scraped
+    #Join missed information with already scraped
     def join_missed_with_scraped(self, missed, scraped):
-        """Join missed informations with already scraped
+        """Join missed information with already scraped
         
         Parameters
         ----------
@@ -567,8 +566,8 @@ class ScrapingMorizon:
             
         return scraped
     
-    #Get districts and cities links
-    def get_details(self, split_size, skip_n_elements = 0, oferts = []):
+    #Get apartments details
+    def get_details(self, split_size, skip_n_elements = 0, offers = []):
         """The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
 
         Parameters
@@ -577,38 +576,38 @@ class ScrapingMorizon:
            value divided by total number of links it is used to create splits to relieve RAM memory
         from: int, default(0)
             how many first "splitted" elements should be omitted 
-        oferts: list, optional
-            for which oferts links the properties are to be downloaded (default for all)
+        offers: list, optional
+            for which offers links the properties are to be downloaded (default for all)
 
         """
         
         #Verify whether user want to specify specific pages
-        if any(oferts):
-            results_oferts = oferts
+        if any(offers):
+            results_offers = offers
         else:
-            results_oferts = self.get_oferts()
+            results_offers = self.get_offers()
         
 
         #Create splits to relieve RAM memory
-        if(len(results_oferts) < split_size):
-            splitted = range(0, len(results_oferts))
+        if(len(results_offers) < split_size):
+            splitted = range(0, len(results_offers))
         else:
-            splitted = np.array_split(list(range(0,len(results_oferts))), len(results_oferts)/split_size)
+            splitted = np.array_split(list(range(0,len(results_offers))), len(results_offers)/split_size)
             splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]]  for elements in splitted]
             splitted[len(splitted) - 1][1] += 1
         
         for split in splitted[skip_n_elements:]:
-            results_details = self.scraping_all_links(self.scraping_oferts_details_exceptions,results_oferts[split[0]:split[1]])
+            results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,results_offers[split[0]:split[1]])
             
             #Assign to variables missed links and scraped properly
             missed_details = [details for details in results_details if "www.morizon.pl" in details]
             results_details = self.flatten([details for details in results_details if (details != None) & ("www.morizon.pl" not in details)])
             
             #Scrape missed links and join them to already scraped
-            missed_details_list = self.missed_links_all(missed_oferts = missed_details, func = self.missed_details_func, restriction = 5, details = True)
+            missed_details_list = self.missed_links_all(missed_offers = missed_details, func = self.missed_details_func, restriction = 5, details = True)
             results_details = self.join_missed_with_scraped(missed_details_list,results_details)
             
-            #Informations for user
+            #Information for user
             print("%s splits left" %(len(splitted) - (splitted.index(split) + 1)))
             print("Tyle jest Does not exist: " + str(len([result for result in results_details if result == "Does not exist"])))
             
@@ -616,14 +615,14 @@ class ScrapingMorizon:
             results_details = [result for result in results_details if (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
             pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
 
-    #Try to connect with ofert link, if it is not possible save link to global list
-    def scraping_oferts_details_exceptions(self,link):
-        """Try to connect with ofert link, if it is not possible save link to global list
+    #Try to connect with offer link, if it is not possible save link to global list
+    def scraping_offers_details_exceptions(self,link):
+        """Try to connect with offer link, if it is not possible save link to global list
 
         Parameters
         ----------
         link: str
-           ofert link
+           offer link
          
         Returns
         ------
@@ -632,20 +631,20 @@ class ScrapingMorizon:
         """
         
         try:
-            ofert_infos = self.scraping_oferts_details(link)
+            offer_infos = self.scraping_offers_details(link)
         except:
-            ofert_infos = link
+            offer_infos = link
             
-        return ofert_infos
+        return offer_infos
     
-    #Scraping details from ofert         
-    def scraping_oferts_details(self,link):
-        """Try to connect with ofert link, if it is not possible save link to global list
+    #Scraping details from offer
+    def scraping_offers_details(self,link):
+        """Try to connect with offer link, if it is not possible save link to global list
 
         Parameters
         ----------
         link: str
-           ofert link
+           offer link
          
         Returns
         ------
@@ -656,23 +655,23 @@ class ScrapingMorizon:
         """
         
         #Scraping details from link
-        ofert_infos = defaultdict(list)
+        offer_infos = defaultdict(list)
         soup_details = self.enterPage_parser(link)
         try:
             #Title and subtitle
-            title = self.extract_informations(self.soup_find_informations(soup = soup_details,
+            title = self.extract_information(self.soup_find_information(soup = soup_details,
                                                                    find_attr = ['div', 'class', 'summaryLocation clearfix row']).findAll("span"))
                
-            subtitle = self.extract_informations(self.soup_find_informations(soup = soup_details,
+            subtitle = self.extract_information(self.soup_find_information(soup = soup_details,
                                                                     find_attr = ['div', 'class', 'summaryTypeTransaction clearfix']))
-            #Basic informations
-            price = self.informations_exists(self.soup_find_informations(soup = soup_details,
+            #Basic information
+            price = self.information_exists(self.soup_find_information(soup = soup_details,
                                                                  find_attr = ['li', 'class', 'paramIconPrice']))
-            priceM2 = self.informations_exists(self.soup_find_informations(soup = soup_details,
+            priceM2 = self.information_exists(self.soup_find_information(soup = soup_details,
                                                                  find_attr = ['li', 'class', 'paramIconPriceM2']))
-            area = self.informations_exists(self.soup_find_informations(soup = soup_details,
+            area = self.information_exists(self.soup_find_information(soup = soup_details,
                                                                  find_attr = ['li', 'class', 'paramIconLivingArea']))
-            rooms = self.informations_exists(self.soup_find_informations(soup = soup_details,
+            rooms = self.information_exists(self.soup_find_information(soup = soup_details,
                                                                     find_attr = ['li', 'class', 'paramIconNumberOfRooms']))
                
                
@@ -683,45 +682,45 @@ class ScrapingMorizon:
             params_p = params.findAll("p")
             
             #Description
-            description = self.extract_informations(self.soup_find_informations(soup = soup_details,
+            description = self.extract_information(self.soup_find_information(soup = soup_details,
                                                                 find_attr = ['div', 'class', 'description']),True, "p")
             soup_details.find("section", attrs={"class": "propertyMap"})
             
             #Longitude and Latitude
-            google_map = self.soup_find_informations(soup = soup_details, find_attr = ['div', 'class', 'GoogleMap'])
+            google_map = self.soup_find_information(soup = soup_details, find_attr = ['div', 'class', 'GoogleMap'])
             lat = self.spatial_data_exists(google_map, 'data-lat')
             lng = self.spatial_data_exists(google_map, 'data-lng')
             
-            #Assign informations to dictionary
-            #ofert_infos["city"] = city_name
-            #ofert_infos["district"] = district.split("najnowsze/")[1].split("/")[1]
-            ofert_infos["title"] = title
-            ofert_infos["subtitle"] = subtitle
-            ofert_infos["price"] = price
-            ofert_infos["priceM2"] = priceM2
-            ofert_infos["area"] = area
-            ofert_infos["rooms"] = rooms
-            ofert_infos["params_h3"] = params_h3
-            ofert_infos["params_tables"] = params_tables
-            ofert_infos["params_p"] = params_p
-            ofert_infos["description"] = description
-            ofert_infos["lat"] = lat
-            ofert_infos["lng"] = lng
-            ofert_infos["link"] = link
+            #Assign information to dictionary
+            #offer_infos["city"] = city_name
+            #offer_infos["district"] = district.split("najnowsze/")[1].split("/")[1]
+            offer_infos["title"] = title
+            offer_infos["subtitle"] = subtitle
+            offer_infos["price"] = price
+            offer_infos["priceM2"] = priceM2
+            offer_infos["area"] = area
+            offer_infos["rooms"] = rooms
+            offer_infos["params_h3"] = params_h3
+            offer_infos["params_tables"] = params_tables
+            offer_infos["params_p"] = params_p
+            offer_infos["description"] = description
+            offer_infos["lat"] = lat
+            offer_infos["lng"] = lng
+            offer_infos["link"] = link
             
-            return(ofert_infos)
+            return(offer_infos)
             
         except:
             return "Does not exist"
         
     #Find in soup with 3 args
-    def soup_find_informations(self,soup, find_attr):
+    def soup_find_information(self,soup, find_attr):
         """Find in soup with 3 args
 
         Parameters
         ----------
         soup: str
-            ofert link
+            offer link
         find_attr: list
             attributes of tag
          
@@ -734,7 +733,7 @@ class ScrapingMorizon:
         return soup.find(find_attr[0], attrs={find_attr[1]: find_attr[2]})
     
     #Extract strings from infos founded in soup
-    def extract_informations(self,find_in, find_with_obj = False, obj = None):
+    def extract_information(self,find_in, find_with_obj = False, obj = None):
         """Find in soup with 3 args
 
         Parameters
@@ -762,9 +761,9 @@ class ScrapingMorizon:
         except:
             return "None"
     
-    #Verify if basic informations in 'em' tag exists
-    def informations_exists(self, details):
-        """Verify if basic informations in 'em' tag exists
+    #Verify if basic information in 'em' tag exists
+    def information_exists(self, details):
+        """Verify if basic information in 'em' tag exists
 
         Parameters
         ----------
@@ -780,18 +779,18 @@ class ScrapingMorizon:
         """
         
         try:
-            return self.extract_informations(details.em)
+            return self.extract_information(details.em)
         except:
             return "None"
     
-    #Verify if informations about apartment location exists    
+    #Verify if information about apartment location exists
     def spatial_data_exists(self,data, kind):
-        """Verify if informations about apartment location exists    
+        """Verify if information about apartment location exists
 
         Parameters
         ----------
         data: list
-            extracted informations about longitude and latitude
+            extracted information about longitude and latitude
         kind: str
             determines whether longitude or latitude is searched   
          
