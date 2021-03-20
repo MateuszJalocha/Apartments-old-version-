@@ -1,4 +1,4 @@
-# Scraping Morizon
+#Scraping Otodom
 
 # Libraries
 from bs4 import BeautifulSoup
