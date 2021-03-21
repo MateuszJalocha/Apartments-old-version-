@@ -217,7 +217,7 @@ class ScrapingOtodom(Scraper):
                                (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
             pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
 
-    def json_information_try(self, obj, path, is_spatial, is_address = False, is_targetFeatures = False, info_type = ''):
+    def json_information_exception(self, obj, path, is_spatial, is_address = False, is_targetFeatures = False, info_type = ''):
         try:
             if is_spatial:
                 return self.extract_spatial_information(obj,path)
@@ -322,59 +322,59 @@ class ScrapingOtodom(Scraper):
                 json_object = json.loads(res[2].contents[0])
 
                 # Longitude and Latitude
-                lat = self.json_information_try(obj=json_object,
+                lat = self.json_information_exception(obj=json_object,
                                                 path=['props', 'pageProps', 'ad', 'location', 'coordinates', 'latitude'],
                                                 is_spatial=True)
-                lng = self.json_information_try(obj=json_object,
+                lng = self.json_information_exception(obj=json_object,
                                                 path=['props', 'pageProps', 'ad', 'location', 'coordinates', 'longitude'],
                                                 is_spatial=True)
 
                 # Adress and voivodeship
-                address = self.json_information_try(obj=json_object,
+                address = self.json_information_exception(obj=json_object,
                                                     path=['props', 'pageProps', 'ad', 'location', 'address', 'value'],
                                                     is_spatial=True, is_address=True)
-                voivodeship = self.json_information_try(obj=json_object,
+                voivodeship = self.json_information_exception(obj=json_object,
                                                         path=['props', 'pageProps', 'ad', 'location', 'geoLevels', 'label'],
                                                         is_spatial=False, info_type="region")
-                city = self.json_information_try(obj=json_object,
+                city = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'location', 'geoLevels', 'label'],
                                                  is_spatial=False, info_type="city")
-                district = self.json_information_try(obj=json_object,
+                district = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'location', 'geoLevels', 'label'],
                                                  is_spatial=False, info_type="district")
 
                 # Target features (area, building floors num, etc.)
-                area = self.json_information_try(obj=json_object,
+                area = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Area'],
                                                  is_spatial=False, is_targetFeatures=True)
-                build_year = self.json_information_try(obj=json_object,
+                build_year = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Build_year'],
                                                  is_spatial=False, is_targetFeatures=True)
-                building_floors_num = self.json_information_try(obj=json_object,
+                building_floors_num = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Building_floors_num'],
                                                  is_spatial=False, is_targetFeatures=True)
-                building_material = self.json_information_try(obj=json_object,
+                building_material = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Building_material'],
                                                  is_spatial=False, is_targetFeatures=True)
-                building_type = self.json_information_try(obj=json_object,
+                building_type = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Building_type'],
                                                  is_spatial=False, is_targetFeatures=True)
-                construction_status = self.json_information_try(obj=json_object,
+                construction_status = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Construction_status'],
                                                  is_spatial=False, is_targetFeatures=True)
-                deposit = self.json_information_try(obj=json_object,
+                deposit = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Deposit'],
                                                  is_spatial=False, is_targetFeatures=True)
-                floor_number = self.json_information_try(obj=json_object,
+                floor_number = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Floor_no'],
                                                  is_spatial=False, is_targetFeatures=True)
-                heating = self.json_information_try(obj=json_object,
+                heating = self.json_information_exception(obj=json_object,
                                                  path=['props', 'pageProps', 'ad', 'target', 'Heating'],
                                                  is_spatial=False, is_targetFeatures=True)
-                rent = self.json_information_try(obj=json_object,
+                rent = self.json_information_exception(obj=json_object,
                                                     path=['props', 'pageProps', 'ad', 'target', 'Rent'],
                                                     is_spatial=False, is_targetFeatures=True)
-                rooms_num = self.json_information_try(obj=json_object,
+                rooms_num = self.json_information_exception(obj=json_object,
                                                     path=['props', 'pageProps', 'ad', 'target', 'Rooms_num'],
                                                     is_spatial=False, is_targetFeatures=True)
 

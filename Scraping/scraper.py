@@ -323,3 +323,25 @@ class Scraper:
         except:
             return "None"
 
+    # Try to connect with offer link, if it is not possible save link to global list
+    def scraping_offers_details_exceptions(self, link):
+        """Try to connect with offer link, if it is not possible save link to global list
+
+        Parameters
+        ----------
+        link: str
+           offer link
+
+        Returns
+        ------
+        defaultdict
+            If scraping succeeds, it is the details of the flat and otherwise a link to the offer
+        """
+
+        try:
+            offer_infos = self.scraping_offers_details(link)
+        except:
+            offer_infos = link
+
+        return offer_infos
+
