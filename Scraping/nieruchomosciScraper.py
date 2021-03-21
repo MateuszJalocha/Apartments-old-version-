@@ -8,8 +8,11 @@ from datetime import datetime
 import concurrent.futures
 import numpy as np
 import pandas as pd
+import sys
+sys.path.append('Scraping')
 from scraper import Scraper
 from datetime import datetime
+import json
 
 z = ["dolnoslaskie", "kujawsko-pomorskie","lodzkie","lubelskie","lubuskie","malopolskie","mazowieckie",
                              "opolskie", "podkarpackie", "podlaskie", "pomorskie", "slaskie", "warminsko-mazurskie",
@@ -214,6 +217,221 @@ class ScrapingOtodom(Scraper):
                                (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
             pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
 
+    def json_information_try(self, obj, path, is_spatial, is_address = False, is_targetFeatures = False, info_type = ''):
+        try:
+            if is_spatial:
+                return self.extract_spatial_information(obj,path)
+            elif is_targetFeatures:
+                return self.extract_target_features_information(obj, path)
+            else:
+                return self.extract_localization_information(obj, path, is_address, info_type)
+        except:
+            return "None"
+
+    def extract_target_features_information(self, obj, path):
+        return obj[path[0]][path[1]][path[2]][path[3]][path[4]]
+
+    def extract_localization_information(self, obj, path, is_address, info_type):
+        temp_obj = obj[path[0]][path[1]][path[2]][path[3]][path[4]][0][path[5]]
+
+        if is_address:
+            return temp_obj
+        else:
+            return [el['label'] for el in temp_obj if el['type'] == info_type]
+
+    def extract_spatial_information(self, obj, path):
+        return obj[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]]
+
+    def extract_information_otodom(self, find_in, is_description=False):
+        """Find in soup with 3 args
+
+        Parameters
+        ----------
+        find_in: BeautifulSoup
+            object where used to find information
+        find_with_obj: boolean, (default False)
+            determines whether user wants to find elements by "obj"
+        obj: str, (default None)
+            find all elements with that object
+
+        Returns
+        ------
+        list
+            elements with specific attributes
+        str
+            "None" informs that information is not available
+        """
+
+        try:
+            if is_description:
+                [elem.replace_with(elem.text + "\n\n") for element in find_in for elem in
+                 element.find_all(["a", "p", "div", "h3", "br", "li"])]
+                return [element.text for element in find_in]
+            else:
+                return [element.text for element in find_in if element.text != '']
+        except:
+            return "None"
+
+    # Scraping details from offer
+    def scraping_offers_details(self, link):
+        """Try to connect with offer link, if it is not possible save link to global list
+
+        Parameters
+        ----------
+        link: str
+           offer link
+
+        Returns
+        ------
+        defaultdict
+            the details of the flat
+        str
+            Information that offer is no longer available
+        """
+
+        # Scraping details from link
+        offer_infos = defaultdict(list)
+        soup_details = self.enterPage_parser(link)
+        try:
+            # Title and subtitle
+            title = self.extract_information(self.soup_find_information(soup=soup_details,
+                                                              find_attr=['h1', 'class',
+                                                                         'css-46s0sq edo911a18']))
+
+            subtitle = self.extract_information(self.soup_find_information(soup=soup_details,
+                                                                 find_attr=['a', 'class',
+                                                                            'css-1qz7z11 eom7om61']))
+            price = self.extract_information(self.soup_find_information(soup=soup_details,
+                                                              find_attr=['strong', 'class',
+                                                                         'css-srd1q3 edo911a17']))
+
+            # Details and description (h2)
+            details = self.extract_information_otodom(self.soup_find_information(soup=soup_details,
+                                                                       find_attr=['div', 'class',
+                                                                                  'css-1d9dws4 e1dlfs272']))
+            description = self.extract_information_otodom(self.soup_details.findAll("p").copy(), True)
+
+            # Additional information (h3)
+            additional_info_headers = [header.text for header in soup_details.findAll("h3")]
+            additional_info = self.extract_information_otodom(
+                soup_details("ul", attrs=["class", "css-13isnqa e9d1vc80"]).copy(), True)
+
+            # Information in json
+            try:
+                res = soup_details.findAll('script')
+                json_object = json.loads(res[2].contents[0])
+
+                # Longitude and Latitude
+                lat = self.json_information_try(obj=json_object,
+                                                path=['props', 'pageProps', 'ad', 'location', 'coordinates', 'latitude'],
+                                                is_spatial=True)
+                lng = self.json_information_try(obj=json_object,
+                                                path=['props', 'pageProps', 'ad', 'location', 'coordinates', 'longitude'],
+                                                is_spatial=True)
+
+                # Adress and voivodeship
+                address = self.json_information_try(obj=json_object,
+                                                    path=['props', 'pageProps', 'ad', 'location', 'address', 'value'],
+                                                    is_spatial=True, is_address=True)
+                voivodeship = self.json_information_try(obj=json_object,
+                                                        path=['props', 'pageProps', 'ad', 'location', 'geoLevels', 'label'],
+                                                        is_spatial=False, info_type="region")
+                city = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'location', 'geoLevels', 'label'],
+                                                 is_spatial=False, info_type="city")
+                district = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'location', 'geoLevels', 'label'],
+                                                 is_spatial=False, info_type="district")
+
+                # Target features (area, building floors num, etc.)
+                area = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Area'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                build_year = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Build_year'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                building_floors_num = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Building_floors_num'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                building_material = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Building_material'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                building_type = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Building_type'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                construction_status = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Construction_status'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                deposit = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Deposit'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                floor_number = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Floor_no'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                heating = self.json_information_try(obj=json_object,
+                                                 path=['props', 'pageProps', 'ad', 'target', 'Heating'],
+                                                 is_spatial=False, is_targetFeatures=True)
+                rent = self.json_information_try(obj=json_object,
+                                                    path=['props', 'pageProps', 'ad', 'target', 'Rent'],
+                                                    is_spatial=False, is_targetFeatures=True)
+                rooms_num = self.json_information_try(obj=json_object,
+                                                    path=['props', 'pageProps', 'ad', 'target', 'Rooms_num'],
+                                                    is_spatial=False, is_targetFeatures=True)
+
+
+            except:
+                lat = "None"
+                lng = "None"
+                address = "None"
+                voivodeship = "None"
+                district = "None"
+                area = "None"
+                build_year = "None"
+                building_floors_num = "None"
+                building_material = "None"
+                building_type = "None"
+                construction_status = "None"
+                deposit = "None"
+                floor_number = "None"
+                heating = "None"
+                rent = "None"
+                rooms_num = "None"
+
+            # Assign information to dictionary
+            offer_infos["city"] = city
+            offer_infos["district"] = district
+            offer_infos["address"] = address
+            offer_infos["voivodeship"] = voivodeship
+            offer_infos["title"] = title
+            offer_infos["subtitle"] = subtitle
+            offer_infos["price"] = price
+            offer_infos["area"] = area
+            offer_infos["additional_info_headers"] = additional_info_headers
+            offer_infos["additional_info"] = additional_info
+            offer_infos["details"] = details
+            offer_infos["description"] = description
+            offer_infos["lat"] = lat
+            offer_infos["lng"] = lng
+            offer_infos["link"] = link
+
+            # Assign target features
+            offer_infos["build_year"] = build_year
+            offer_infos["building_floors_num"] = building_floors_num
+            offer_infos["building_material"] = building_material
+            offer_infos["building_type"] = building_type
+            offer_infos["additional_info"] = additional_info
+            offer_infos["construction_status"] = construction_status
+            offer_infos["deposit"] = deposit
+            offer_infos["floor_number"] = floor_number
+            offer_infos["heating"] = heating
+            offer_infos["rent"] = rent
+            offer_infos["rooms_num"] = rooms_num
+
+            return (offer_infos)
+
+        except:
+            return "Does not exist"
+
 
 
 otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
@@ -228,3 +446,9 @@ now = datetime.now()
 current_time = now.strftime("%H:%M:%S")
 print("Current Time =", current_time)
 print(len(oto_pag))
+
+res = soup_details.findAll('script')
+json_object = json.loads(res[2].contents[0])
+
+for language in json_object['languages']:
+    print('{}: {}'.format(language['displayName'], language['reviewCount']))
