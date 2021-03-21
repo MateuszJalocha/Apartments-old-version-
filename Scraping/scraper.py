@@ -252,3 +252,74 @@ class Scraper:
 
         return scraped
 
+    # Try to connect with offer link, if it is not possible save link to global list
+
+    def scraping_offers_details_exceptions(self, link):
+        """Try to connect with offer link, if it is not possible save link to global list
+
+        Parameters
+        ----------
+        link: str
+           offer link
+
+        Returns
+        ------
+        defaultdict
+            If scraping succeeds, it is the details of the flat and otherwise a link to the offer
+        """
+
+        try:
+            offer_infos = self.scraping_offers_details(link)
+        except:
+            offer_infos = link
+
+        return offer_infos
+
+    # Find in soup with 3 args
+    def soup_find_information(self, soup, find_attr):
+        """Find in soup with 3 args
+
+        Parameters
+        ----------
+        soup: str
+            offer link
+        find_attr: list
+            attributes of tag
+
+        Returns
+        ------
+        list
+            elements with specific attributes
+        """
+
+        return soup.find(find_attr[0], attrs={find_attr[1]: find_attr[2]})
+
+    # Extract strings from infos founded in soup
+    def extract_information(self, find_in, find_with_obj=False, obj=None):
+        """Find in soup with 3 args
+
+        Parameters
+        ----------
+        find_in: BeautifulSoup
+            object where used to find information
+        find_with_obj: boolean, (default False)
+            determines whether user wants to find elements by "obj"
+        obj: str, (default None)
+            find all elements with that object
+
+        Returns
+        ------
+        list
+            elements with specific attributes
+        str
+            "None" informs that information is not available
+        """
+
+        try:
+            if find_with_obj:
+                return [info_part.string.strip() for info_part in find_in.find_all(obj) if (info_part.string != None)]
+            else:
+                return [info_part.string.strip() for info_part in find_in if (info_part.string != None)]
+        except:
+            return "None"
+
