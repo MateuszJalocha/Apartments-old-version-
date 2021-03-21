@@ -1,4 +1,4 @@
-#Scraping Otodom
+# Scraping Otodom
 
 # Libraries
 from bs4 import BeautifulSoup
@@ -11,7 +11,9 @@ import pandas as pd
 from scraper import Scraper
 from datetime import datetime
 
-
+z = ["dolnoslaskie", "kujawsko-pomorskie","lodzkie","lubelskie","lubuskie","malopolskie","mazowieckie",
+                             "opolskie", "podkarpackie", "podlaskie", "pomorskie", "slaskie", "warminsko-mazurskie",
+                             "wielkopolskie","zachodniopomorskie"]
 
 class ScrapingOtodom(Scraper):
     """
@@ -47,7 +49,7 @@ class ScrapingOtodom(Scraper):
         self.page = page
         self.max_threads = max_threads
         self.page_name = page_name
-        self.voivodeships = ["dolnoslaskie", "kujawsko-pomorskie","lodzkie","lubelskie","lubuskie","malopolskie"]
+        self.voivodeships = ["dolnoslaskie"]
 
     # Scraping pages links
     def scraping_pages_links(self, void):
@@ -147,9 +149,7 @@ class ScrapingOtodom(Scraper):
             results_pages = self.get_pages()
 
         results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
-        print("Po pierwszym etapie")
         missed_offers = [offers for offers in results_offers if "page" in offers]
-        print(missed_offers)
         results_offers = np.concatenate(
             [properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0)
 
@@ -160,10 +160,63 @@ class ScrapingOtodom(Scraper):
 
         return self.flatten(results_offers)
 
+    # Get apartments details
+    def get_details(self, split_size, skip_n_elements=0, offers=[]):
+        """The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
+
+        Parameters
+        ----------
+        split_size: int
+           value divided by total number of links it is used to create splits to relieve RAM memory
+        from: int, default(0)
+            how many first "splitted" elements should be omitted
+        offers: list, optional
+            for which offers links the properties are to be downloaded (default for all)
+
+        """
+
+        # Verify whether user want to specify specific pages
+        if any(offers):
+            results_offers = offers
+        else:
+            results_offers = self.get_offers()
+
+        # Create splits to relieve RAM memory
+        if (len(results_offers) < split_size):
+            splitted = range(0, len(results_offers))
+        else:
+            splitted = np.array_split(list(range(0, len(results_offers))), len(results_offers) / split_size)
+            splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]] for
+                        elements in splitted]
+            splitted[len(splitted) - 1][1] += 1
+
+        for split in splitted[skip_n_elements:]:
+            results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,
+                                                      results_offers[split[0]:split[1]])
+
+            # Assign to variables missed links and scraped properly
+            missed_details = [details for details in results_details if "www.morizon.pl" in details]
+            results_details = self.flatten(
+                [details for details in results_details if (details != None) & ("www.morizon.pl" not in details)])
+
+            # Scrape missed links and join them to already scraped
+            missed_details_list = self.missed_links_all(missed_offers=missed_details, func=self.missed_details_func,
+                                                        restriction=5, details=True)
+            results_details = self.join_missed_with_scraped(missed_details_list, results_details)
+
+            # Information for user
+            print("%s splits left" % (len(splitted) - (splitted.index(split) + 1)))
+            print("Tyle jest Does not exist: " + str(
+                len([result for result in results_details if result == "Does not exist"])))
+
+            # Save scraped details as csv file
+            results_details = [result for result in results_details if
+                               (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
+            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
 
 
-otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/',
-                                      page_name='https://www.otodom.pl', max_threads=30)
+
+otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
 
 now = datetime.now()
 
