@@ -3,15 +3,43 @@
 # Libraries
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
-from collections import defaultdict
 import concurrent.futures
 import numpy as np
-import pandas as pd
+from typing import Tuple, List, Callable, DefaultDict, Union
 
 
 class Scraper:
+    """
+    General class from which classes to scrape specific offer pages inherit
+
+    Methods
+    -------
+    enterPage_parser(link):
+        Read website, encode and create HTML parser
+    extract_links_idClass(isId, to_find,soup, replace, replace_to =[]):
+        Extract links with id or class tag
+    prepare_range(pages_names):
+        Prepare pages range
+    flatten(result_to_flatt):
+        Flatten a list
+    scraping_all_links(func, all_links):
+        General function to scrape links that activates ThreadPoolExecutor
+    missed_offers_pages(self, links, offers):
+        Scrape missed offers and pages links
+    missed_links_all(self, missed_offers, func, offers):
+        Scrape omitted data until you have scraped all
+    join_missed_with_scraped(self, missed, scraped):
+        Join missed information with already scraped
+    scraping_offers_details_exceptions(link):
+        Try to connect with offer link, if it is not possible save link to global list
+    soup_find_information(soup, find_attr):
+        Find in soup with 3 args
+    extract_information(find_in, find_with_obj = False, obj = None):
+        Extract strings from infos founded in soup
+    """
+
     # Read website, encode and create HTML parser
-    def enterPage_parser(self, link):
+    def enterPage_parser(self, link: str) -> BeautifulSoup:
         """Read website, encode and create HTML parser
 
         try to encode with "utf-8" if it creates error then use "laitn-1"
@@ -41,7 +69,8 @@ class Scraper:
         return BeautifulSoup(html, "html.parser")
 
     # Extract links with id or class tag
-    def extract_links_idClass(self, isId, to_find, soup, replace, replace_to=[]):
+    def extract_links_idClass(self, isId: bool, to_find: str, soup: BeautifulSoup, replace: bool,
+                              replace_to: List[str] = []) -> Tuple[List[str], List[str]]:
         """Extract links with id or class tag
 
         extracting links with id or class tag
@@ -56,15 +85,14 @@ class Scraper:
             object used to extract information
         replace: boolean
             determines whether part of the link is to be replaced
-        replace_to: list
+        replace_to: list, optional
             two elements list containing what [0] has to be replaces with what [1]
 
         Returns
         ------
-        list
-            list containing names of extracted links e.g.  districts, cities
-        list
-            list containing extrated links e.g. districts, pages
+        list, list
+            1. list containing names of extracted links e.g.  districts, cities.
+            2. list containing extrated links e.g. districts, pages
         """
 
         # Find by id or class
@@ -88,7 +116,7 @@ class Scraper:
         return extracted_names, extracted_links
 
     # Prepare pages range
-    def prepare_range(self, pages_names):
+    def prepare_range(self, pages_names: List[str]) -> range:
         """Preparing the range of pages to create links
 
         Parameters
@@ -102,7 +130,7 @@ class Scraper:
         """
 
         # if length is 0 then there is only 1 page
-        if (len(pages_names) != 0):
+        if len(pages_names) != 0:
             last_page = int(pages_names[len(pages_names) - 1])
         else:
             last_page = 1
@@ -110,7 +138,7 @@ class Scraper:
         return range(1, last_page + 1)
 
     # Flatten a list
-    def flatten(self, result_to_flatt):
+    def flatten(self, result_to_flatt: List[List[str]]) -> Union[List[List[str]],List[str]]:
         """Flatten a list
 
         Parameters
@@ -133,7 +161,7 @@ class Scraper:
         return rt
 
     # General function to scrape links that activates ThreadPoolExecutor
-    def scraping_all_links(self, func, all_links):
+    def scraping_all_links(self, func: Callable, all_links: List[str]) -> List[DefaultDict[str, str]]:
         """General function to scrape links that activates ThreadPoolExecutor
 
         Parameters
@@ -156,7 +184,8 @@ class Scraper:
         return results
 
     # Scrape missed offers and pages links
-    def missed_offers_pages(self, links, offers, func):
+    def missed_offers_pages(self, links: List[str], offers: bool,
+                            func: Callable) -> Tuple[List[DefaultDict[str, str]], List[str]]:
         """Scrape missed offers and pages links
 
         Parameters
@@ -170,10 +199,9 @@ class Scraper:
 
         Returns
         ------
-        list
-            scraped missed links
-        list
-            links that are still missing
+        defaultdict, list
+            1. scraped missed links
+            2. links that are still missing
         """
 
         links = self.scraping_all_links(func, links)
@@ -187,7 +215,8 @@ class Scraper:
         return links, missed_links
 
     # Scrape omitted data until you have scraped all
-    def missed_links_all(self, missed_offers, func, details, restriction=5, offers=None, func_pages_or_offers=None):
+    def missed_links_all(self, missed_offers: List[str], func: Callable, details: bool, restriction: int = 5,
+                         offers: bool = None, func_pages_or_offers: Callable = None) -> List:
         """General function to scrape missing links that activates ThreadPoolExecutor until all are scraped
 
         Parameters
@@ -216,17 +245,19 @@ class Scraper:
 
         # If there are some missed links left scrape them
         while len(missed_offers) != 0 & n_times <= restriction:
-            if (details):
+            if details:
                 missed_scraped, missed_offers = func(missed_offers)
             else:
                 missed_scraped, missed_offers = func(missed_offers, offers, func_pages_or_offers)
             missed_offers_list.append(missed_scraped)
             n_times += 1
+            print("n_times: ", n_times)
+            print("missed: ", len(missed_scraped))
 
         return missed_offers_list
-        # Join missed information with already scraped
-    
-    def join_missed_with_scraped(self, missed, scraped):
+
+    # Join missed information with already scraped
+    def join_missed_with_scraped(self, missed: List[str], scraped: List[str]) -> List:
         """Join missed information with already scraped
 
         Parameters
@@ -253,8 +284,7 @@ class Scraper:
         return scraped
 
     # Try to connect with offer link, if it is not possible save link to global list
-
-    def scraping_offers_details_exceptions(self, link):
+    def scraping_offers_details_exceptions(self, link: str) -> Union[DefaultDict[str, str], str]:
         """Try to connect with offer link, if it is not possible save link to global list
 
         Parameters
@@ -264,7 +294,7 @@ class Scraper:
 
         Returns
         ------
-        defaultdict
+        defaultdict or str
             If scraping succeeds, it is the details of the flat and otherwise a link to the offer
         """
 
@@ -276,7 +306,7 @@ class Scraper:
         return offer_infos
 
     # Find in soup with 3 args
-    def soup_find_information(self, soup, find_attr):
+    def soup_find_information(self, soup: BeautifulSoup, find_attr: List[str]) -> List[str]:
         """Find in soup with 3 args
 
         Parameters
@@ -295,7 +325,8 @@ class Scraper:
         return soup.find(find_attr[0], attrs={find_attr[1]: find_attr[2]})
 
     # Extract strings from infos founded in soup
-    def extract_information(self, find_in, find_with_obj=False, obj=None):
+    def extract_information(self, find_in: BeautifulSoup, find_with_obj: bool = False,
+                            obj: str = None) -> Union[List[str], str]:
         """Find in soup with 3 args
 
         Parameters
@@ -309,10 +340,9 @@ class Scraper:
 
         Returns
         ------
-        list
-            elements with specific attributes
-        str
-            "None" informs that information is not available
+        list or str
+            1. elements with specific attributes
+            2. "None" informs that information is not available
         """
 
         try:
@@ -322,26 +352,3 @@ class Scraper:
                 return [info_part.string.strip() for info_part in find_in if (info_part.string != None)]
         except:
             return "None"
-
-    # Try to connect with offer link, if it is not possible save link to global list
-    def scraping_offers_details_exceptions(self, link):
-        """Try to connect with offer link, if it is not possible save link to global list
-
-        Parameters
-        ----------
-        link: str
-           offer link
-
-        Returns
-        ------
-        defaultdict
-            If scraping succeeds, it is the details of the flat and otherwise a link to the offer
-        """
-
-        try:
-            offer_infos = self.scraping_offers_details(link)
-        except:
-            offer_infos = link
-
-        return offer_infos
-

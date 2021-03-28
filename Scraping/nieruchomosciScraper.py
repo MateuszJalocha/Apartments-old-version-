@@ -1,15 +1,12 @@
 # Scraping Otodom
+import sys
+sys.path.append('Scraping')
 
 # Libraries
 from bs4 import BeautifulSoup
-from urllib.request import urlopen
 from collections import defaultdict
-from datetime import datetime
-import concurrent.futures
 import numpy as np
 import pandas as pd
-import sys
-sys.path.append('Scraping')
 from scraper import Scraper
 from datetime import datetime
 import json
@@ -52,7 +49,9 @@ class ScrapingOtodom(Scraper):
         self.page = page
         self.max_threads = max_threads
         self.page_name = page_name
-        self.voivodeships = ["dolnoslaskie"]
+        self.voivodeships = ["dolnoslaskie", "kujawsko-pomorskie","lodzkie","lubelskie","lubuskie","malopolskie","mazowieckie",
+                             "opolskie", "podkarpackie", "podlaskie", "pomorskie", "slaskie", "warminsko-mazurskie",
+                             "wielkopolskie","zachodniopomorskie"]
 
     # Scraping pages links
     def scraping_pages_links(self, void):
@@ -151,11 +150,14 @@ class ScrapingOtodom(Scraper):
         else:
             results_pages = self.get_pages()
 
+        print(results_pages)
         results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
         missed_offers = [offers for offers in results_offers if "page" in offers]
         results_offers = np.concatenate(
             [properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0)
 
+        print(missed_offers)
+        len(missed_offers)
         missed_offers_list = self.missed_links_all(missed_offers=missed_offers, func=self.missed_offers_pages,
                                                    details=False, offers=True,
                                                    func_pages_or_offers=self.scraping_offers_links)
@@ -198,9 +200,9 @@ class ScrapingOtodom(Scraper):
                                                       results_offers[split[0]:split[1]])
 
             # Assign to variables missed links and scraped properly
-            missed_details = [details for details in results_details if "www.morizon.pl" in details]
+            missed_details = [details for details in results_details if "www.otodom.pl" in details]
             results_details = self.flatten(
-                [details for details in results_details if (details != None) & ("www.morizon.pl" not in details)])
+                [details for details in results_details if (details != None) & ("www.otodom.pl" not in details)])
 
             # Scrape missed links and join them to already scraped
             missed_details_list = self.missed_links_all(missed_offers=missed_details, func=self.missed_details_func,
@@ -214,8 +216,8 @@ class ScrapingOtodom(Scraper):
 
             # Save scraped details as csv file
             results_details = [result for result in results_details if
-                               (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
-            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
+                               (result != "Does not exist") & (result != None) & ("www.otodom.pl" not in result)]
+            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
 
     def json_information_exception(self, obj, path, is_spatial, is_address = False, is_targetFeatures = False, info_type = ''):
         try:
@@ -292,6 +294,7 @@ class ScrapingOtodom(Scraper):
         # Scraping details from link
         offer_infos = defaultdict(list)
         soup_details = self.enterPage_parser(link)
+
         try:
             # Title and subtitle
             title = self.extract_information(self.soup_find_information(soup=soup_details,
@@ -309,7 +312,7 @@ class ScrapingOtodom(Scraper):
             details = self.extract_information_otodom(self.soup_find_information(soup=soup_details,
                                                                        find_attr=['div', 'class',
                                                                                   'css-1d9dws4 e1dlfs272']))
-            description = self.extract_information_otodom(self.soup_details.findAll("p").copy(), True)
+            description = self.extract_information_otodom(soup_details.findAll("p").copy(), True)
 
             # Additional information (h3)
             additional_info_headers = [header.text for header in soup_details.findAll("h3")]
@@ -319,7 +322,8 @@ class ScrapingOtodom(Scraper):
             # Information in json
             try:
                 res = soup_details.findAll('script')
-                json_object = json.loads(res[2].contents[0])
+                lengths = [len(str(el)) for el in res]
+                json_object = json.loads(res[lengths.index(max(lengths))].contents[0])
 
                 # Longitude and Latitude
                 lat = self.json_information_exception(obj=json_object,
@@ -344,58 +348,27 @@ class ScrapingOtodom(Scraper):
                                                  is_spatial=False, info_type="district")
 
                 # Target features (area, building floors num, etc.)
-                area = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Area'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                build_year = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Build_year'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                building_floors_num = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Building_floors_num'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                building_material = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Building_material'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                building_type = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Building_type'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                construction_status = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Construction_status'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                deposit = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Deposit'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                floor_number = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Floor_no'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                heating = self.json_information_exception(obj=json_object,
-                                                 path=['props', 'pageProps', 'ad', 'target', 'Heating'],
-                                                 is_spatial=False, is_targetFeatures=True)
-                rent = self.json_information_exception(obj=json_object,
-                                                    path=['props', 'pageProps', 'ad', 'target', 'Rent'],
-                                                    is_spatial=False, is_targetFeatures=True)
-                rooms_num = self.json_information_exception(obj=json_object,
-                                                    path=['props', 'pageProps', 'ad', 'target', 'Rooms_num'],
-                                                    is_spatial=False, is_targetFeatures=True)
+                features = ["Area", "Build-year", "Building_floors_num", "Building_material", "Building_type",
+                            "Construction_status", "Deposit", "Floor_no", "Heating", "Rent", "Rooms_num"]
+                values = []
+
+                for feature in features:
+                    offer_infos[feature] = self.json_information_exception(obj=json_object,
+                                                                           path=['props', 'pageProps', 'ad', 'target',
+                                                                                 feature],
+                                                                           is_spatial=False, is_targetFeatures=True)
 
 
             except:
+                features = ["Area", "Build-year", "Building_floors_num", "Building_material", "Building_type",
+                            "Construction_status", "Deposit", "Floor_no", "Heating", "Rent", "Rooms_num"]
                 lat = "None"
                 lng = "None"
                 address = "None"
                 voivodeship = "None"
                 district = "None"
-                area = "None"
-                build_year = "None"
-                building_floors_num = "None"
-                building_material = "None"
-                building_type = "None"
-                construction_status = "None"
-                deposit = "None"
-                floor_number = "None"
-                heating = "None"
-                rent = "None"
-                rooms_num = "None"
+                for feature in features:
+                    offer_infos[feature] = "None"
 
             # Assign information to dictionary
             offer_infos["city"] = city
@@ -405,7 +378,6 @@ class ScrapingOtodom(Scraper):
             offer_infos["title"] = title
             offer_infos["subtitle"] = subtitle
             offer_infos["price"] = price
-            offer_infos["area"] = area
             offer_infos["additional_info_headers"] = additional_info_headers
             offer_infos["additional_info"] = additional_info
             offer_infos["details"] = details
@@ -414,41 +386,54 @@ class ScrapingOtodom(Scraper):
             offer_infos["lng"] = lng
             offer_infos["link"] = link
 
-            # Assign target features
-            offer_infos["build_year"] = build_year
-            offer_infos["building_floors_num"] = building_floors_num
-            offer_infos["building_material"] = building_material
-            offer_infos["building_type"] = building_type
-            offer_infos["additional_info"] = additional_info
-            offer_infos["construction_status"] = construction_status
-            offer_infos["deposit"] = deposit
-            offer_infos["floor_number"] = floor_number
-            offer_infos["heating"] = heating
-            offer_infos["rent"] = rent
-            offer_infos["rooms_num"] = rooms_num
-
             return (offer_infos)
 
         except:
             return "Does not exist"
+
+    # Scrape missed details links
+    def missed_details_func(self, links):
+        """Scrape missed details links
+
+        Parameters
+        ----------
+        links: list
+            missing links
+
+        Returns
+        ------
+        list
+            scraped missed links
+        list
+            links that are still missing
+        """
+
+        links = self.scraping_all_links(self.scraping_offers_details_exceptions, links)
+
+        # Assign missed links to variable
+        missed_links = [details for details in links if "www.otodom.pl" in details]
+
+        return links, missed_links
 
 
 
 otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
 
 now = datetime.now()
-
 current_time = now.strftime("%H:%M:%S")
 print("Current Time =", current_time)
-oto_pag = otodom_pages.get_offers()
+oferty = otodom_pages.get_offers()
+now = datetime.now()
+current_time = now.strftime("%H:%M:%S")
+print("Current Time =", current_time)
+
+now = datetime.now()
+current_time = now.strftime("%H:%M:%S")
+print("Current Time =", current_time)
+oto_pag = otodom_pages.get_details(500, offers=oferty)
 now = datetime.now()
 
 current_time = now.strftime("%H:%M:%S")
 print("Current Time =", current_time)
 print(len(oto_pag))
 
-res = soup_details.findAll('script')
-json_object = json.loads(res[2].contents[0])
-
-for language in json_object['languages']:
-    print('{}: {}'.format(language['displayName'], language['reviewCount']))

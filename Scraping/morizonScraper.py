@@ -1,4 +1,6 @@
 #Scraping Morizon
+import sys
+sys.path.append('Scraping')
 
 #Libraries
 from bs4 import BeautifulSoup
@@ -6,6 +8,7 @@ from urllib.request import urlopen
 from collections import defaultdict
 from datetime import datetime
 import concurrent.futures
+from scraper import Scraper
 import numpy as np
 import pandas as pd
 
@@ -13,7 +16,7 @@ MAX_THREADS = 30
 PAGE_NAME = 'https://www.morizon.pl'
 
 
-class ScrapingMorizon:
+class ScrapingMorizon(Scraper):
     """
     A class used to scrape offers from morizon.pl
 
@@ -30,22 +33,12 @@ class ScrapingMorizon:
 
     Methods
     -------
-    enterPage_parser(link):
-        Read website, encode and create HTML parser
-    extract_links_idClass(isId, to_find,soup, replace, replace_to =[]):
-        Extract links with id or class tag
-    prepare_range(pages_names):
-        Prepare pages range
-    flatten(result_to_flatt):
-        Flatten a list
     scraping_cities_and_districts_links(page):
         Scraping cities and runnning function to scrape districts
     scraping_districts_links(city_link):
         Scraping cities and districts
     get_districts_cities():
         Get districts links
-    scraping_all_links(func, all_links):
-        General function to scrape links that activates ThreadPoolExecutor
     scraping_pages_links(district_link):
         Scraping pages links
     get_pages(districts = []):
@@ -54,24 +47,12 @@ class ScrapingMorizon:
         Scraping offers links
     get_offers(pages = []):
         Get districts and cities links
-    missed_offers_pages(self, links, offers):
-        Scrape missed offers and pages links
     missed_details_func(self, links, offers):
         Scrape missed details links
-    missed_links_all(self, missed_offers, func, offers):
-        Scrape omitted data until you have scraped all
-    join_missed_with_scraped(self, missed, scraped):
-        Join missed information with already scraped
     get_details(self, split_size, offers = []):
         The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
-    scraping_offers_details_exceptions(link):
-        Try to connect with offer link, if it is not possible save link to global list
     scraping_offers_details(link):
         Scraping details from offer
-    soup_find_information(soup, find_attr):
-        Find in soup with 3 args
-    extract_information(find_in, find_with_obj = False, obj = None):
-        Extract strings from infos founded in soup
     information_exists(details):
         Verify if basic information in 'em' tag exists
     spatial_data_exists(data, kind):
@@ -93,126 +74,6 @@ class ScrapingMorizon:
         self.page = page
         self.max_threads = max_threads
         self.page_name = page_name
-        
-    #Read website, encode and create HTML parser
-    def enterPage_parser(self, link): 
-        """Read website, encode and create HTML parser
-
-        try to encode with "utf-8" if it creates error then use "laitn-1"
-
-        Parameters
-        ----------
-        link : str
-            link to web page which you want to parse
-
-        Returns
-        ------
-        BeautifulSoup
-            a beautifulsoup object used to extract useful information
-        """
-        
-        #Get website    
-        URL = link
-        page = urlopen(URL)
-    
-        #Read website, encode and create HTML parser
-        html_bytes = page.read()
-        try:
-            html = html_bytes.decode("utf-8")
-        except:
-            html = html_bytes.decode("latin-1")
-            
-        return BeautifulSoup(html, "html.parser")
-    
-    #Extract links with id or class tag
-    def extract_links_idClass(self, isId, to_find,soup, replace, replace_to =[]):   
-        """Extract links with id or class tag
-
-        extracting links with id or class tag
-
-        Parameters
-        ----------
-        isId: boolean
-            determines whether to look for an id or a class
-        to_find: str
-            name of class or id  
-        soup: BeautifulSoup
-            object used to extract information
-        replace: boolean
-            determines whether part of the link is to be replaced
-        replace_to: list
-            two elements list containing what [0] has to be replaces with what [1]
-            
-        Returns
-        ------
-        list
-            list containing names of extracted links e.g.  districts, cities
-        list
-            list containing extrated links e.g. districts, pages
-        """
-        
-        #Find by id or class
-        if(isId):
-            extracted = soup.find(id=to_find)
-        else:
-            extracted = soup.find(class_=to_find)
-        
-        #If there is only one page assign empty arrays to variables
-        try:
-            #Find all a tag's
-            extracted_names = [name.string for name in extracted.findAll('a') if(name.string != None)]
-            #Extract links and replace part of string to create link with newest observations
-            extracted_links = [link.get("href") for link in extracted.findAll('a')  if(link.get("href") != None)]
-            if(replace):
-                extracted_links = [link.replace(replace_to[0], replace_to[1]) for link in extracted_links]
-        except:
-            extracted_names = []
-            extracted_links = []
-        
-        return extracted_names, extracted_links
-    
-    #Prepare pages range
-    def prepare_range(self, pages_names):
-        """Preparing the range of pages to create links
-
-        Parameters
-        ----------
-        pages_names: list
-            links to individual city districts
-        Returns
-        ------
-        range
-            range of pages at morizon for specific page_name
-        """
-        
-        #if length is 0 then there is only 1 page
-        if(len(pages_names) != 0):
-            last_page = int(pages_names[len(pages_names) - 1])
-        else:
-            last_page = 1
-        
-        return range(1,last_page + 1)
-    
-    #Flatten a list
-    def flatten(self, result_to_flatt):
-        """Flatten a list
-
-        Parameters
-        ----------
-        result_to_flatt: list
-            which has to be flatten
-            
-        Returns
-        ------
-        list
-            flatten list
-        """
-        
-        rt = []
-        for i in result_to_flatt:
-            if isinstance(i,list): rt.extend(self.flatten(i))
-            else: rt.append(i)
-        return rt
         
     #Scraping cities and runnning function to scrape districts
     def scraping_cities_and_districts_links(self, page):
@@ -291,30 +152,7 @@ class ScrapingMorizon:
         results_districts = np.concatenate([districts for districts in results_districts if districts != None], axis=0 )
         
         return results_districts
-    
-    #General function to scrape links that activates ThreadPoolExecutor
-    def scraping_all_links(self, func, all_links):
-        """General function to scrape links that activates ThreadPoolExecutor
 
-        Parameters
-        ----------
-        func: function
-            function which will be activated in ThreadPoolExecutor
-        all_links: list
-            list with links to scrape
-        Returns
-        ------
-        list
-            scraped elements: details, and links e.g. pages
-        """
-
-        threads = min(self.max_threads, len(all_links))
-    
-        with concurrent.futures.ThreadPoolExecutor(max_workers=threads) as executor:
-            results = list(executor.map(func, all_links))
-            
-        return results
-    
     #Scraping pages links
     def scraping_pages_links(self, district_link):
         """Scraping pages links
@@ -445,37 +283,6 @@ class ScrapingMorizon:
 
         return self.flatten(results_offers)
     
-    #Scrape missed offers and pages links
-    def missed_offers_pages(self, links, offers, func):
-        """Scrape missed offers and pages links
-
-        Parameters
-        ----------
-        links: list
-            missing links
-        offers: boolean
-            determines whether the missing links relate to properties
-        func: function
-            function which will be activated in ThreadPoolExecutor
-
-        Returns
-        ------
-        list
-            scraped missed links
-        list
-            links that are still missing
-        """
-        
-        links = self.scraping_all_links(func,links)
-
-        #Assign missed links to variable
-        if offers:
-            missed_links = [offers for offers in links if "page" in offers]
-        else:
-            missed_links = [offers for offers in links if "page" not in offers]
-
-        return links, missed_links
-    
     #Scrape missed details links
     def missed_details_func(self, links):
         """Scrape missed details links
@@ -499,73 +306,7 @@ class ScrapingMorizon:
         missed_links = [details for details in links if "www.morizon.pl" in details]
         
         return links, missed_links
-    
-    #Scrape omitted data until you have scraped all
-    def missed_links_all(self, missed_offers, func, details,restriction = 5, offers = None, func_pages_or_offers = None):
-        """General function to scrape missing links that activates ThreadPoolExecutor until all are scraped
-        
-        Parameters
-        ----------
-        missed_offers: list
-            missing links
-        func: function
-            function which will be activated in ThreadPoolExecutor
-        details: boolean
-            determines whether the missing links relate to details
-        restriction: int
-            restriction for while loop
-        offers: boolean, default(None)
-            determines whether the missing links relate to properties
-        func_pages_or_offers: function, default(None)
-            function to scrape pages or offers
-            
-        Returns
-        ------
-        list
-            scraped elements: details, and links e.g. pages
-        """
-        
-        missed_offers_list = []
-        n_times = 0
-        
-        #If there are some missed links left scrape them
-        while len(missed_offers) != 0 & n_times <= restriction:
-            if(details):    
-                missed_scraped, missed_offers = func(missed_offers)
-            else:
-                missed_scraped, missed_offers = func(missed_offers, offers,func_pages_or_offers)
-            missed_offers_list.append(missed_scraped)
-            n_times += 1
-            
-        return missed_offers_list
-            
-    #Join missed information with already scraped
-    def join_missed_with_scraped(self, missed, scraped):
-        """Join missed information with already scraped
-        
-        Parameters
-        ----------
-        missed: list
-            scraped missed links
-        scraped: list
-            links scraped without problems
-            
-        Returns
-        ------
-        list
-            scraped elements: details, and links e.g. pages
-        """
 
-        if len(missed) > 1:
-            missed = np.concatenate([properties for properties in missed if properties != None], axis=0)
-            scraped = np.concatenate([scraped,missed],axis = 0)
-        elif len(missed) == 1:
-            scraped = np.concatenate([scraped, missed[0]],axis = 0)
-        elif len(missed) == 0:
-            scraped = scraped
-            
-        return scraped
-    
     #Get apartments details
     def get_details(self, split_size, skip_n_elements = 0, offers = []):
         """The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
@@ -613,29 +354,7 @@ class ScrapingMorizon:
             
             #Save scraped details as csv file
             results_details = [result for result in results_details if (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
-            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + "ss.csv")
-
-    #Try to connect with offer link, if it is not possible save link to global list
-    def scraping_offers_details_exceptions(self,link):
-        """Try to connect with offer link, if it is not possible save link to global list
-
-        Parameters
-        ----------
-        link: str
-           offer link
-         
-        Returns
-        ------
-        defaultdict
-            If scraping succeeds, it is the details of the flat and otherwise a link to the offer
-        """
-        
-        try:
-            offer_infos = self.scraping_offers_details(link)
-        except:
-            offer_infos = link
-            
-        return offer_infos
+            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
     
     #Scraping details from offer
     def scraping_offers_details(self,link):
@@ -712,54 +431,6 @@ class ScrapingMorizon:
             
         except:
             return "Does not exist"
-        
-    #Find in soup with 3 args
-    def soup_find_information(self,soup, find_attr):
-        """Find in soup with 3 args
-
-        Parameters
-        ----------
-        soup: str
-            offer link
-        find_attr: list
-            attributes of tag
-         
-        Returns
-        ------
-        list
-            elements with specific attributes
-        """
-        
-        return soup.find(find_attr[0], attrs={find_attr[1]: find_attr[2]})
-    
-    #Extract strings from infos founded in soup
-    def extract_information(self,find_in, find_with_obj = False, obj = None):
-        """Find in soup with 3 args
-
-        Parameters
-        ----------
-        find_in: BeautifulSoup
-            object where used to find information
-        find_with_obj: boolean, (default False)
-            determines whether user wants to find elements by "obj"
-        obj: str, (default None)
-            find all elements with that object
-         
-        Returns
-        ------
-        list
-            elements with specific attributes
-        str
-            "None" informs that information is not available
-        """
-       
-        try:
-            if find_with_obj:
-                return [info_part.string.strip() for info_part in find_in.find_all(obj) if(info_part.string != None)]
-            else:
-                return [info_part.string.strip() for info_part in find_in if(info_part.string != None)]
-        except:
-            return "None"
     
     #Verify if basic information in 'em' tag exists
     def information_exists(self, details):
@@ -784,7 +455,7 @@ class ScrapingMorizon:
             return "None"
     
     #Verify if information about apartment location exists
-    def spatial_data_exists(self,data, kind):
+    def spatial_data_exists(self, data, kind):
         """Verify if information about apartment location exists
 
         Parameters
