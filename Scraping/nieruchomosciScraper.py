@@ -11,10 +11,6 @@ from scraper import Scraper
 from datetime import datetime
 import json
 
-z = ["dolnoslaskie", "kujawsko-pomorskie","lodzkie","lubelskie","lubuskie","malopolskie","mazowieckie",
-                             "opolskie", "podkarpackie", "podlaskie", "pomorskie", "slaskie", "warminsko-mazurskie",
-                             "wielkopolskie","zachodniopomorskie"]
-
 class ScrapingOtodom(Scraper):
     """
     A class used to scrape oferts from otodom.pl
@@ -99,8 +95,6 @@ class ScrapingOtodom(Scraper):
 
         return self.flatten(results_pages)
 
-        return results_pages
-
     # Scraping offers links
     def scraping_offers_links(self, page_link):
         """Scraping offers links
@@ -150,14 +144,11 @@ class ScrapingOtodom(Scraper):
         else:
             results_pages = self.get_pages()
 
-        print(results_pages)
         results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
         missed_offers = [offers for offers in results_offers if "page" in offers]
         results_offers = np.concatenate(
             [properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0)
 
-        print(missed_offers)
-        len(missed_offers)
         missed_offers_list = self.missed_links_all(missed_offers=missed_offers, func=self.missed_offers_pages,
                                                    details=False, offers=True,
                                                    func_pages_or_offers=self.scraping_offers_links)
@@ -176,7 +167,7 @@ class ScrapingOtodom(Scraper):
         from: int, default(0)
             how many first "splitted" elements should be omitted
         offers: list, optional
-            for which offers links the properties are to be downloaded (default for all)
+            for which offers links the properties details are to be scraped (default for all)
 
         """
 
