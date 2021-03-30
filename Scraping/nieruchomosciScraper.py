@@ -10,6 +10,7 @@ import pandas as pd
 from scraper import Scraper
 from datetime import datetime
 import json
+from typing import Tuple, List, Callable, DefaultDict, Union
 
 class ScrapingOtodom(Scraper):
     """
@@ -30,7 +31,16 @@ class ScrapingOtodom(Scraper):
 
     Methods
     -------
-
+    scraping_pages_links(void: str) -> List[str]
+        Scraping pages based on voivodeships set to self.voivodeship variable in __init__
+    get_pages() -> List[str]
+        The method called up by the user to download all links of the pages from otodom.pl
+    scraping_offers_links(page_link: str) -> List[str]
+        Scraping offers links
+    get_offers(pages: List = []) -> List[str]
+        The method called up by the user to download all links of the properties from otodom.pl
+    get_details(split_size: int, skip_n_elements: int = 0, offers: List = []) -> None
+        The method called up by the user to download all details about apartments.
     """
 
     def __init__(self, page, page_name, max_threads=30):
@@ -53,8 +63,18 @@ class ScrapingOtodom(Scraper):
                              "wielkopolskie","zachodniopomorskie"]
 
     # Scraping pages links
-    def scraping_pages_links(self, void):
+    def scraping_pages_links(self, void: str) -> List[str]:
+        """Scraping pages based on voivodeships set to self.voivodeship variable in __init__
 
+        Parameters
+        ----------
+        void: str
+            voivodeship
+        Returns
+        ------
+        list
+            links to pages for voivodeship specified in void argument
+        """
         # Create link
         link = self.page + void
 
@@ -70,27 +90,35 @@ class ScrapingOtodom(Scraper):
             pages_range = self.prepare_range(pages_names)
 
             # Create all pages links
-            pages_links = [link + '?page=' + str(page) for page in pages_range]
-
-            all_pages_links = pages_links
+            all_pages_links = [link + '?page=' + str(page) for page in pages_range]
 
         except:
             all_pages_links = link
 
         return all_pages_links
 
-    # The method called up by the user to download all links of the pages from morizon.pl
-    def get_pages(self):
+    # The method called up by the user to download all links of the pages from otodom.pl
+    def get_pages(self) -> List[str]:
+        """The method called up by the user to download all links of the pages from otodom.pl
 
+         Returns
+         ------
+         list
+             list with pages for all voivodeships specified in __init__
+         """
+
+        # Scrape all links for voivodeships in self.voivodeship variable
         results_pages = self.scraping_all_links(self.scraping_pages_links, self.voivodeships)
         results_pages = self.flatten(results_pages)
 
+        # Verify weather there are some missing oferts
         missed_pages = [oferts for oferts in results_pages if "page" not in oferts]
 
         if len(missed_pages) != 0:
             results_pages = self.flatten(
                 [properties for properties in results_pages if (properties != None) & ("page" in properties)])
 
+        # Try to scrape missing links once again and join them with scraped before
         missed_pages_list = self.missed_links_all(missed_offers=missed_pages, func=self.missed_offers_pages,
                                                   details=False, offers=False,
                                                   func_pages_or_offers=self.scraping_pages_links)
@@ -99,7 +127,7 @@ class ScrapingOtodom(Scraper):
         return self.flatten(results_pages)
 
     # Scraping offers links
-    def scraping_offers_links(self, page_link):
+    def scraping_offers_links(self, page_link: str) -> List[str]:
         """Scraping offers links
 
         Parameters
@@ -110,7 +138,7 @@ class ScrapingOtodom(Scraper):
         Returns
         ------
         list
-            scraped offers links
+            scraped offers links for specified in argument page link
         """
 
         try:
@@ -127,8 +155,8 @@ class ScrapingOtodom(Scraper):
         return all_properties_links
 
     # Get districts and cities links
-    def get_offers(self, pages=[]):
-        """The method called up by the user to download all links of the properties from morizon.pl
+    def get_offers(self, pages: List = []) -> List[str]:
+        """The method called up by the user to download all links of the properties from otodom.pl
 
         Parameters
         ----------
@@ -147,32 +175,33 @@ class ScrapingOtodom(Scraper):
         else:
             results_pages = self.get_pages()
 
-        print("zaczynamy")
+        # Scrape all offers
         results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
-        print("koniec zaczynamy")
+
+        #Verify weather there are some missing offers
         missed_offers = [offers for offers in results_offers if "page" in offers]
         results_offers = np.concatenate(
             [properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0)
 
-        print("pobrane: ", len(results_offers))
-        print("missed: ",len(missed_offers))
+        # Scrape missing offers and join them with scraped before
         missed_offers_list = self.missed_links_all(missed_offers=missed_offers, func=self.missed_offers_pages,
                                                    details=False, offers=True,
                                                    func_pages_or_offers=self.scraping_offers_links)
-        print("koniec i laczenie zaraz sue zaczune, ", missed_offers_list)
+
         results_offers = self.join_missed_with_scraped(missed_offers_list, results_offers)
 
         return self.flatten(results_offers)
 
     # Get apartments details
-    def get_details(self, split_size, skip_n_elements=0, offers=[]):
-        """The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
+    def get_details(self, split_size: int, skip_n_elements: int = 0, offers: List = []) -> None:
+        """The method called up by the user to download all details about apartments. Results are saved to
+        number_of_links/split.csv files
 
         Parameters
         ----------
         split_size: int
            value divided by total number of links it is used to create splits to relieve RAM memory
-        from: int, default(0)
+        skip_n_elements: int, default(0)
             how many first "splitted" elements should be omitted
         offers: list, optional
             for which offers links the properties details are to be scraped (default for all)
@@ -194,6 +223,7 @@ class ScrapingOtodom(Scraper):
                         elements in splitted]
             splitted[len(splitted) - 1][1] += 1
 
+        # Scrape details
         for split in splitted[skip_n_elements:]:
             results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,
                                                       results_offers[split[0]:split[1]])
@@ -203,7 +233,7 @@ class ScrapingOtodom(Scraper):
             results_details = self.flatten(
                 [details for details in results_details if (details != None) & ("www.otodom.pl" not in details)])
 
-            # Scrape missed links and join them to already scraped
+            # Scrape missed links and join them with scraped before
             missed_details_list = self.missed_links_all(missed_offers=missed_details, func=self.missed_details_func,
                                                         restriction=5, details=True)
             results_details = self.join_missed_with_scraped(missed_details_list, results_details)
@@ -218,6 +248,7 @@ class ScrapingOtodom(Scraper):
                                (result != "Does not exist") & (result != None) & ("www.otodom.pl" not in result)]
             pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
 
+    # Verify weather there is possibility to extract specific information from json
     def json_information_exception(self, obj, path, is_spatial, is_address = False, is_targetFeatures = False, info_type = ''):
         try:
             if is_spatial:
