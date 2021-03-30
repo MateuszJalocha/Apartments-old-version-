@@ -28,6 +28,9 @@ class ScrapingOtodom(Scraper):
     voivodeships : list
         list of voivodeships in Poland
 
+    Methods
+    -------
+
     """
 
     def __init__(self, page, page_name, max_threads=30):
@@ -144,14 +147,19 @@ class ScrapingOtodom(Scraper):
         else:
             results_pages = self.get_pages()
 
+        print("zaczynamy")
         results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
+        print("koniec zaczynamy")
         missed_offers = [offers for offers in results_offers if "page" in offers]
         results_offers = np.concatenate(
             [properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0)
 
+        print("pobrane: ", len(results_offers))
+        print("missed: ",len(missed_offers))
         missed_offers_list = self.missed_links_all(missed_offers=missed_offers, func=self.missed_offers_pages,
                                                    details=False, offers=True,
                                                    func_pages_or_offers=self.scraping_offers_links)
+        print("koniec i laczenie zaraz sue zaczune, ", missed_offers_list)
         results_offers = self.join_missed_with_scraped(missed_offers_list, results_offers)
 
         return self.flatten(results_offers)
@@ -407,24 +415,24 @@ class ScrapingOtodom(Scraper):
         return links, missed_links
 
 
+if "__name__" == "__main__":
+    otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
 
-otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
+    oferty = otodom_pages.get_offers()
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
 
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
-print("Current Time =", current_time)
-oferty = otodom_pages.get_offers()
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
-print("Current Time =", current_time)
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
+    oto_pag = otodom_pages.get_details(500, offers=oferty)
+    now = datetime.now()
 
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
-print("Current Time =", current_time)
-oto_pag = otodom_pages.get_details(500, offers=oferty)
-now = datetime.now()
-
-current_time = now.strftime("%H:%M:%S")
-print("Current Time =", current_time)
-print(len(oto_pag))
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
+    print(len(oto_pag))
 

@@ -85,10 +85,9 @@ class ScrapingMorizon(Scraper):
             full main page name 
         Returns
         ------
-        list
-            links to cities
-        list
-            links to individual city districts
+        list, list
+            1. links to cities
+            2. links to individual city districts
         """
         
         #Read website, encode and create HTML parser

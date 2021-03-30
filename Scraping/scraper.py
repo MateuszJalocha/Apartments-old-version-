@@ -6,7 +6,7 @@ from urllib.request import urlopen
 import concurrent.futures
 import numpy as np
 from typing import Tuple, List, Callable, DefaultDict, Union
-
+import pandas as pd
 
 class Scraper:
     """
@@ -244,7 +244,7 @@ class Scraper:
         n_times = 0
 
         # If there are some missed links left scrape them
-        while len(missed_offers) != 0 & n_times <= restriction:
+        while (len(missed_offers) != 0) & (n_times <= restriction):
             if details:
                 missed_scraped, missed_offers = func(missed_offers)
             else:
@@ -252,8 +252,11 @@ class Scraper:
             missed_offers_list.append(missed_scraped)
             n_times += 1
             print("n_times: ", n_times)
-            print("missed: ", len(missed_scraped))
-
+            print("restriction: ", restriction)
+            print("missed scraped: ", len(missed_scraped))
+            print("missed : ", len(missed_offers))
+            pd.DataFrame(missed_offers).to_csv("jakich_brakuje?.csv")
+        print("koniec while")
         return missed_offers_list
 
     # Join missed information with already scraped
@@ -273,14 +276,16 @@ class Scraper:
             scraped elements: details, and links e.g. pages
         """
 
+        print("Scraper, missed: ", missed)
         if len(missed) > 1:
-            missed = np.concatenate([properties for properties in missed if properties != None], axis=0)
+            missed = [properties for properties in self.flatten(missed) if properties != None]
             scraped = np.concatenate([scraped, missed], axis=0)
         elif len(missed) == 1:
             scraped = np.concatenate([scraped, missed[0]], axis=0)
         elif len(missed) == 0:
             scraped = scraped
 
+        print(len(scraped))
         return scraped
 
     # Try to connect with offer link, if it is not possible save link to global list
@@ -305,7 +310,7 @@ class Scraper:
 
         return offer_infos
 
-    # Find in soup with 3 args
+    # Find in Beautifulsoup with 3 args
     def soup_find_information(self, soup: BeautifulSoup, find_attr: List[str]) -> List[str]:
         """Find in soup with 3 args
 
@@ -324,7 +329,7 @@ class Scraper:
 
         return soup.find(find_attr[0], attrs={find_attr[1]: find_attr[2]})
 
-    # Extract strings from infos founded in soup
+    # Extract strings from information founded in soup
     def extract_information(self, find_in: BeautifulSoup, find_with_obj: bool = False,
                             obj: str = None) -> Union[List[str], str]:
         """Find in soup with 3 args
