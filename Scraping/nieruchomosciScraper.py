@@ -12,7 +12,7 @@ import pandas as pd
 from scraper import Scraper
 from datetime import datetime
 import json
-from typing import Tuple, List, Callable, DefaultDict, Union, Dict
+from typing import Tuple, List, DefaultDict, Union, Dict
 
 class ScrapingOtodom(Scraper):
     """

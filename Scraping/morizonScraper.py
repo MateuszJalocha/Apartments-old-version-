@@ -11,6 +11,7 @@ import concurrent.futures
 from scraper import Scraper
 import numpy as np
 import pandas as pd
+from typing import Tuple, List, Callable, DefaultDict, Union, Dict
 
 MAX_THREADS = 30
 PAGE_NAME = 'https://www.morizon.pl'
@@ -33,29 +34,40 @@ class ScrapingMorizon(Scraper):
 
     Methods
     -------
-    scraping_cities_and_districts_links(page):
-        Scraping cities and runnning function to scrape districts
-    scraping_districts_links(city_link):
+    scraping_cities_and_districts_links(page: str) -> Tuple[List[str], List[str]]
+        Scraping cities and running function to scrape districts
+
+    scraping_districts_links(city_link: str) -> List[str]:
         Scraping cities and districts
-    get_districts_cities():
+
+    get_districts_cities() -> List[str]:
         Get districts links
-    scraping_pages_links(district_link):
+
+    scraping_pages_links(district_link: str) -> List[str]:
         Scraping pages links
-    get_pages(districts = []):
+
+    get_pages(districts: List[str] = []) -> List[str]:
         The method called up by the user to download all links of the pages from morizon.pl
-    scraping_offers_links(page_link):
+
+    scraping_offers_links(page_link: str) -> List[str]:
         Scraping offers links
-    get_offers(pages = []):
+
+    get_offers(pages: List[str] = []) -> List[str]:
         Get districts and cities links
-    missed_details_func(self, links, offers):
+
+    missed_details_func(links: List[str]) -> Tuple[List[str], List[str]]:
         Scrape missed details links
-    get_details(self, split_size, offers = []):
-        The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
-    scraping_offers_details(link):
+
+    get_details(split_size: int, skip_n_elements: int = 0, offers: List[str] = []) -> None:
+        The method called up by the user to download all details about apartments.
+
+    scraping_offers_details(link: str) -> Union[DefaultDict[str,str], str]:
         Scraping details from offer
-    information_exists(details):
+
+    information_exists(details: List[str]) -> Union[List[str], str]:
         Verify if basic information in 'em' tag exists
-    spatial_data_exists(data, kind):
+
+    spatial_data_exists(data: List[str], kind: str) -> Union[List[str], str]:
         Verify if information about apartment location exists
     """
 
@@ -75,9 +87,9 @@ class ScrapingMorizon(Scraper):
         self.max_threads = max_threads
         self.page_name = page_name
         
-    #Scraping cities and runnning function to scrape districts
-    def scraping_cities_and_districts_links(self, page):
-        """Scraping cities and runnning function to scrape districts
+    #Scraping cities and running function to scrape districts
+    def scraping_cities_and_districts_links(self, page: str) -> Tuple[List[str], List[str]]:
+        """Scraping cities and running function to scrape districts
 
         Parameters
         ----------
@@ -104,7 +116,7 @@ class ScrapingMorizon(Scraper):
         return cities_newest_links, results
     
     #Scraping districts links
-    def scraping_districts_links(self,city_link):
+    def scraping_districts_links(self, city_link: str) -> List[str]:
         """Scraping districts links
 
         Parameters
@@ -134,13 +146,9 @@ class ScrapingMorizon(Scraper):
         return districs_newest_links
             
     #Get districts links
-    def get_districts_cities(self):
+    def get_districts_cities(self) -> List[str]:
         """Scraping districts links
 
-        Parameters
-        ----------
-        city_link: str
-            link to specific city
         Returns
         ------
         list
@@ -148,12 +156,12 @@ class ScrapingMorizon(Scraper):
         """
         
         cities_newest_links, results_districts = self.scraping_cities_and_districts_links(self.page)
-        results_districts = np.concatenate([districts for districts in results_districts if districts != None], axis=0 )
+        results_districts = np.concatenate([districts for districts in results_districts if districts is not None], axis=0)
         
         return results_districts
 
     #Scraping pages links
-    def scraping_pages_links(self, district_link):
+    def scraping_pages_links(self, district_link: str) -> List[str]:
         """Scraping pages links
 
         Parameters
@@ -190,7 +198,7 @@ class ScrapingMorizon(Scraper):
         return all_pages_links
     
     #The method called up by the user to download all links of the pages from morizon.pl
-    def get_pages(self, districts = []):
+    def get_pages(self, districts: List[str] = []) -> List[str]:
         """The method called up by the user to download all links of the pages from morizon.pl
 
         Parameters
@@ -224,7 +232,7 @@ class ScrapingMorizon(Scraper):
         return self.flatten(results_pages)
     
     #Scraping offers links
-    def scraping_offers_links(self, page_link):
+    def scraping_offers_links(self, page_link: str) -> List[str]:
         """Scraping offers links
 
         Parameters
@@ -253,7 +261,7 @@ class ScrapingMorizon(Scraper):
         return all_properties_links
     
     #Get districts and cities links
-    def get_offers(self, pages = []):
+    def get_offers(self, pages: List[str] = []) -> List[str]:
         """The method called up by the user to download all links of the properties from morizon.pl
 
         Parameters
@@ -283,7 +291,7 @@ class ScrapingMorizon(Scraper):
         return self.flatten(results_offers)
     
     #Scrape missed details links
-    def missed_details_func(self, links):
+    def missed_details_func(self, links: List[str]) -> Tuple[List[str], List[str]]:
         """Scrape missed details links
 
         Parameters
@@ -293,10 +301,9 @@ class ScrapingMorizon(Scraper):
             
         Returns
         ------
-        list
-            scraped missed links
-        list
-            links that are still missing
+        list, list
+            1. scraped missed links
+            2. links that are still missing
         """
         
         links = self.scraping_all_links(self.scraping_offers_details_exceptions,links)
@@ -307,14 +314,15 @@ class ScrapingMorizon(Scraper):
         return links, missed_links
 
     #Get apartments details
-    def get_details(self, split_size, skip_n_elements = 0, offers = []):
-        """The method called up by the user to download all details about apartments. Results are saved to number_of_links/split cv files
+    def get_details(self, split_size: int, skip_n_elements: int = 0, offers: List[str] = []) -> None:
+        """The method called up by the user to download all details about apartments.
+         Results are saved to number_of_links/split.csv files
 
         Parameters
         ----------
         split_size: int
            value divided by total number of links it is used to create splits to relieve RAM memory
-        from: int, default(0)
+        skip_n_elements: int, default(0)
             how many first "splitted" elements should be omitted 
         offers: list, optional
             for which offers links the properties are to be downloaded (default for all)
@@ -356,7 +364,7 @@ class ScrapingMorizon(Scraper):
             pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
     
     #Scraping details from offer
-    def scraping_offers_details(self,link):
+    def scraping_offers_details(self, link: str) -> Union[DefaultDict[str,str], str]:
         """Try to connect with offer link, if it is not possible save link to global list
 
         Parameters
@@ -366,10 +374,9 @@ class ScrapingMorizon(Scraper):
          
         Returns
         ------
-        defaultdict
-            the details of the flat 
-        str
-            Information that offer is no longer available
+        defaultdict or str
+            1. the details of the flat
+            2. information that offer is no longer available
         """
         
         #Scraping details from link
@@ -432,7 +439,7 @@ class ScrapingMorizon(Scraper):
             return "Does not exist"
     
     #Verify if basic information in 'em' tag exists
-    def information_exists(self, details):
+    def information_exists(self, details: List[str]) -> Union[List[str], str]:
         """Verify if basic information in 'em' tag exists
 
         Parameters
@@ -442,10 +449,9 @@ class ScrapingMorizon(Scraper):
             
         Returns
         ------
-        list
-            elements with specific attributes
-        str
-            "None" informs that information is not available
+        list or str
+            1. elements with specific attributes
+            2. "None" informs that information is not available
         """
         
         try:
@@ -454,7 +460,7 @@ class ScrapingMorizon(Scraper):
             return "None"
     
     #Verify if information about apartment location exists
-    def spatial_data_exists(self, data, kind):
+    def spatial_data_exists(self, data: List[str], kind: str) -> Union[List[str], str]:
         """Verify if information about apartment location exists
 
         Parameters
@@ -462,20 +468,19 @@ class ScrapingMorizon(Scraper):
         data: list
             extracted information about longitude and latitude
         kind: str
-            determines whether longitude or latitude is searched   
-         
+            determines whether longitude or latitude is searched
+
         Returns
         ------
-        list
-            elements with specific attributes
-        str
-            "None" informs that information is not available
+        list or str
+            1. elements with specific attributes
+            2. "None" informs that information is not available
 
         """
-        
+
         try:
             return data[kind]
         except:
-            return "None"  
+            return "None"
 
 
