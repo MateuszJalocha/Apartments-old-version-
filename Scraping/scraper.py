@@ -14,27 +14,39 @@ class Scraper:
 
     Methods
     -------
-    enterPage_parser(link):
+    enterPage_parser(link: str) -> BeautifulSoup:
         Read website, encode and create HTML parser
-    extract_links_idClass(isId, to_find,soup, replace, replace_to =[]):
+
+    extract_links_idClass(isId: bool, to_find: str, soup: BeautifulSoup, replace: bool,
+                        replace_to: List[str] = []) -> Tuple[List[str], List[str]]:
         Extract links with id or class tag
-    prepare_range(pages_names):
+
+    prepare_range(pages_names: List[str]) -> range:
         Prepare pages range
-    flatten(result_to_flatt):
+
+    flatten(result_to_flatt: List[List[str]]) -> Union[List[List[str]],List[str]]:
         Flatten a list
-    scraping_all_links(func, all_links):
+
+    scraping_all_links(func: Callable, all_links: List[str]) -> List[DefaultDict[str, str]]:
         General function to scrape links that activates ThreadPoolExecutor
-    missed_offers_pages(self, links, offers):
+
+    missed_offers_pages(links: List[str], offers: bool, func: Callable) -> Tuple[List[DefaultDict[str, str]],List[str]]:
         Scrape missed offers and pages links
-    missed_links_all(self, missed_offers, func, offers):
+
+    missed_links_all(missed_offers: List[str], func: Callable, details: bool, restriction: int = 5, offers: bool = None,
+                    func_pages_or_offers: Callable = None) -> List:
         Scrape omitted data until you have scraped all
-    join_missed_with_scraped(self, missed, scraped):
+
+    join_missed_with_scraped(missed: List[str], scraped: List[str]) -> List:
         Join missed information with already scraped
-    scraping_offers_details_exceptions(link):
+
+    scraping_offers_details_exceptions(link: str) -> Union[DefaultDict[str, str], str]:
         Try to connect with offer link, if it is not possible save link to global list
-    soup_find_information(soup, find_attr):
+
+    soup_find_information(soup: BeautifulSoup, find_attr: List[str]) -> List[str]:
         Find in soup with 3 args
-    extract_information(find_in, find_with_obj = False, obj = None):
+
+    extract_information(find_in: BeautifulSoup, find_with_obj: bool = False, obj: str = None) -> Union[List[str], str]:
         Extract strings from infos founded in soup
     """
 

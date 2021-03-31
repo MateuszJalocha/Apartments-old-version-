@@ -1,4 +1,6 @@
 # Scraping Otodom
+
+# Add path to scraper.py
 import sys
 sys.path.append('Scraping')
 
@@ -10,7 +12,7 @@ import pandas as pd
 from scraper import Scraper
 from datetime import datetime
 import json
-from typing import Tuple, List, Callable, DefaultDict, Union
+from typing import Tuple, List, Callable, DefaultDict, Union, Dict
 
 class ScrapingOtodom(Scraper):
     """
@@ -31,16 +33,42 @@ class ScrapingOtodom(Scraper):
 
     Methods
     -------
-    scraping_pages_links(void: str) -> List[str]
+    scraping_pages_links(void: str) -> List[str]:
         Scraping pages based on voivodeships set to self.voivodeship variable in __init__
-    get_pages() -> List[str]
+
+    get_pages() -> List[str]:
         The method called up by the user to download all links of the pages from otodom.pl
-    scraping_offers_links(page_link: str) -> List[str]
+
+    scraping_offers_links(page_link: str) -> List[str]:
         Scraping offers links
-    get_offers(pages: List = []) -> List[str]
+
+    get_offers(pages: List = []) -> List[str]:
         The method called up by the user to download all links of the properties from otodom.pl
-    get_details(split_size: int, skip_n_elements: int = 0, offers: List = []) -> None
+
+    get_details(split_size: int, skip_n_elements: int = 0, offers: List = []) -> None:
         The method called up by the user to download all details about apartments.
+
+    json_information_exception(obj: Dict[str, str], path: List[str], is_spatial: bool,
+                is_address: bool = False, is_targetFeatures: bool = False, info_type: str = '') -> Union[List[str],str]:
+        Verify weather there is possibility to extract specific information from json
+
+    extract_target_features_information(obj: Dict[str, str], path: List[str]) -> str:
+        Extract from json object target features information (eg. area, build-year)
+
+    extract_localization_information(obj: Dict[str, str], path: List[str], is_address: bool, info_type: str) -> str:
+        Extract from json object localization information (eg. address, region, district, city)
+
+    extract_spatial_information(obj: Dict[str, str], path: List[str]) -> str:
+        Extract from json object spatial information (eg. latitude, longitude)
+
+    extract_information_otodom(find_in: List[str], is_description: bool = False) -> Union[List[str], str]:
+        Extract the information from the str (soup.find obj)
+
+    scraping_offers_details(link: str) -> Union[DefaultDict[str,str], str]:
+        Try to connect with offer link, if it is not possible save link to global list
+
+    missed_details_func(links: List[str]) -> Tuple[List[str], List[str]]:
+        Scrape missed details links
     """
 
     def __init__(self, page, page_name, max_threads=30):
@@ -249,7 +277,32 @@ class ScrapingOtodom(Scraper):
             pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
 
     # Verify weather there is possibility to extract specific information from json
-    def json_information_exception(self, obj, path, is_spatial, is_address = False, is_targetFeatures = False, info_type = ''):
+    def json_information_exception(self, obj: Dict[str, str], path: List[str], is_spatial: bool,
+                                   is_address: bool = False, is_targetFeatures: bool = False,
+                                   info_type: str = '') -> Union[List[str], str]:
+
+        """ Verify weather there is possibility to extract specific information from json
+
+        Parameters
+        ----------
+        obj: Dict
+            json object with details information
+        path: str
+            path to specific information in json object
+        is_spatial: bool
+            information weather variable that you are looking for is a spatial variable (latitude, longitude)
+        is_address: bool, optional (default = False)
+            information weather variable that you are looking for is an address variable
+        is_targetFeatures: bool, optional (default = False)
+            information weather variable that you are looking for is a target-feature variable (area, build-year)
+        info_type: str, optional (default = '')
+            information weather you are looking for region, district or city
+        Returns
+        ------
+        list or str
+            If they exist then the values searched for, and otherwise the value None
+        """
+
         try:
             if is_spatial:
                 return self.extract_spatial_information(obj,path)
@@ -260,42 +313,93 @@ class ScrapingOtodom(Scraper):
         except:
             return "None"
 
-    def extract_target_features_information(self, obj, path):
+    # Extract from jsob object target features information
+    def extract_target_features_information(self, obj: Dict[str, str], path: List[str]) -> str:
+        """ Extract from json object target features information (eg. area, build-year)
+
+        Parameters
+        ----------
+        obj: Dict
+            json object with details information
+        path: str
+            path to specific information in json object
+
+        Returns
+        ------
+        str
+            specified type of feature
+        """
+
         return obj[path[0]][path[1]][path[2]][path[3]][path[4]]
 
-    def extract_localization_information(self, obj, path, is_address, info_type):
+    # Extract from jsob object localization information
+    def extract_localization_information(self, obj: Dict[str, str], path: List[str], is_address: bool,
+                                         info_type: str) -> str:
+        """ Extract from json object localization information (eg. address, region, district, city)
+
+        Parameters
+        ----------
+        obj: Dict
+            json object with details information
+        path: str
+            path to specific information in json object
+        is_address: bool
+            information weather variable that you are looking for is an address variable
+        info_type: str
+            information weather you are looking for region, district or city
+
+        Returns
+        ------
+        str
+            information about address, region, district or city
+        """
         temp_obj = obj[path[0]][path[1]][path[2]][path[3]][path[4]][0][path[5]]
 
         if is_address:
             return temp_obj
         else:
-            return [el['label'] for el in temp_obj if el['type'] == info_type]
+            return [el['label'] for el in temp_obj if el['type'] == info_type][0]
 
-    def extract_spatial_information(self, obj, path):
-        return obj[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]]
-
-    def extract_information_otodom(self, find_in, is_description=False):
-        """Find in soup with 3 args
+    # Extract from jsob object spatial information
+    def extract_spatial_information(self, obj: Dict[str, str], path: List[str]) -> str:
+        """ Extract from json object spatial information (eg. latitude, longitude)
 
         Parameters
         ----------
-        find_in: BeautifulSoup
-            object where used to find information
-        find_with_obj: boolean, (default False)
-            determines whether user wants to find elements by "obj"
-        obj: str, (default None)
-            find all elements with that object
+        obj: Dict
+            json object with details information
+        path: str
+            path to specific information in json object
 
         Returns
         ------
-        list
-            elements with specific attributes
         str
-            "None" informs that information is not available
+            specified type of feature (eg. latitude, longitude)
+        """
+
+        return obj[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]]
+
+    def extract_information_otodom(self, find_in: List[str], is_description: bool = False) -> Union[List[str], str]:
+        """Extract the information from the str (soup.find obj).
+         If it is a description replace the html tags with newline characters, otherwise remove the empty strings from the list.
+
+        Parameters
+        ----------
+        find_in: list
+            object where used to find information
+        is_description: boolean, (default = False)
+            determines whether it is a description (in description replace html tags with new line tags)
+
+        Returns
+        ------
+        list or str
+            1. elements with specific attributes
+            2. "None" informs that information is not available
         """
 
         try:
             if is_description:
+                # Replace html tags with new line tags
                 [elem.replace_with(elem.text + "\n\n") for element in find_in for elem in
                  element.find_all(["a", "p", "div", "h3", "br", "li"])]
                 return [element.text for element in find_in]
@@ -305,20 +409,20 @@ class ScrapingOtodom(Scraper):
             return "None"
 
     # Scraping details from offer
-    def scraping_offers_details(self, link):
-        """Try to connect with offer link, if it is not possible save link to global list
+    def scraping_offers_details(self, link: str) -> Union[DefaultDict[str,str], str]:
+        """Try to connect with offer link, if it is not possible save link to global list.
+         Also try to scrape information from json object
 
         Parameters
         ----------
         link: str
-           offer link
+           link to offer
 
         Returns
         ------
-        defaultdict
-            the details of the flat
-        str
-            Information that offer is no longer available
+        defaultdict or str
+            1. the details of the flat
+            2. information that offer is no longer available
         """
 
         # Scraping details from link
@@ -422,7 +526,7 @@ class ScrapingOtodom(Scraper):
             return "Does not exist"
 
     # Scrape missed details links
-    def missed_details_func(self, links):
+    def missed_details_func(self, links: List[str]) -> Tuple[List[str], List[str]]:
         """Scrape missed details links
 
         Parameters
@@ -432,10 +536,9 @@ class ScrapingOtodom(Scraper):
 
         Returns
         ------
-        list
-            scraped missed links
-        list
-            links that are still missing
+        list, list
+            1. scraped missed links
+            2. links that are still missing
         """
 
         links = self.scraping_all_links(self.scraping_offers_details_exceptions, links)
@@ -446,6 +549,7 @@ class ScrapingOtodom(Scraper):
         return links, missed_links
 
 
+# Remove that
 if "__name__" == "__main__":
     otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
 
