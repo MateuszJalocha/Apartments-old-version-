@@ -470,7 +470,7 @@ class ScrapingOtodom(Scraper):
                 # Adress and voivodeship
                 address = self.json_information_exception(obj=json_object,
                                                     path=['props', 'pageProps', 'ad', 'location', 'address', 'value'],
-                                                    is_spatial=True, is_address=True)
+                                                    is_spatial=False, is_address=True)
                 voivodeship = self.json_information_exception(obj=json_object,
                                                         path=['props', 'pageProps', 'ad', 'location', 'geoLevels', 'label'],
                                                         is_spatial=False, info_type="region")
@@ -482,7 +482,7 @@ class ScrapingOtodom(Scraper):
                                                  is_spatial=False, info_type="district")
 
                 # Target features (area, building floors num, etc.)
-                features = ["Area", "Build-year", "Building_floors_num", "Building_material", "Building_type",
+                features = ["Area", "Build_year", "Building_floors_num", "Building_material", "Building_type",
                             "Construction_status", "Deposit", "Floor_no", "Heating", "Rent", "Rooms_num"]
                 values = []
 
