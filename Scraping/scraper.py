@@ -267,7 +267,6 @@ class Scraper:
             print("restriction: ", restriction)
             print("missed scraped: ", len(missed_scraped))
             print("missed : ", len(missed_offers))
-            pd.DataFrame(missed_offers).to_csv("jakich_brakuje?.csv")
         print("koniec while")
         return missed_offers_list
 
