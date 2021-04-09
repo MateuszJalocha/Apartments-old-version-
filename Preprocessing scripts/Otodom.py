@@ -20,13 +20,13 @@ data = pd.concat(load_files(data_files), ignore_index=True,axis=0)
 
 apartments = data.copy().drop(['Unnamed: 0'],axis=1)
 '''
-apartments1 = pd.read_csv(path+'mieszkania506.csv',
+apartments1 = pd.read_csv(path+'mieszkania503.csv',
                    index_col=0)
 
-apartments2 = pd.read_csv(path+'mieszkania1013.csv',
+apartments2 = pd.read_csv(path+'mieszkania1007.csv',
                     index_col=0)
 
-apartments3 = pd.read_csv(path+'mieszkania1520.csv',
+apartments3 = pd.read_csv(path+'mieszkania1511.csv',
                     index_col=0)
 
 apartments = pd.concat([apartments1, apartments2, apartments3], ignore_index=True, axis=0)
@@ -42,19 +42,25 @@ class Preprocessing_Otodom:
 
         Methods
         -------
-        remove_quotation_marks(self):
+        remove_quotation_marks() ->:
             Remove quotation marks from columns.
-        numeric_information(self):
+
+        numeric_information():
             Replace numeric information to float.
-        remove_new_line_marks(self):
+
+        remove_new_line_marks():
             Remove new line marks from columns.
+
         prepare_table_information(table):
             Create dictionary with table information.
+
         extract_price(apartment_details_price_table):
             Extract price from a string and convert to float.
+
         prepare_additional_info(apartment_details_add_info_table, apartment_details_details_table):
             Prepare column with additional information.
-        create_table(self):
+
+        create_table():
             Create preprocessing table.
         """
     def __init__(self, apartment_details, information_types):
@@ -170,7 +176,7 @@ class Preprocessing_Otodom:
             df_temp = pd.DataFrame([row], columns=column)
             params_table = pd.concat([params_table, df_temp], ignore_index=True)
 
-        return params_table
+        return params_table.where(pd.notnull(params_table),None)
 
     def extract_price(self, apartment_details_price_table: pd.DataFrame) -> pd.DataFrame:
         """
@@ -183,18 +189,25 @@ class Preprocessing_Otodom:
         apartment_details_price_table: pd.DataFrame
             data frame where price information type was changed to float.
         """
+        currency = []
         for i in range(len(apartment_details_price_table)):
-            if apartment_details_price_table[i] == "" or apartment_details_price_table[i] == "None":
-                apartment_details_price_table[i] = ""
+            if apartment_details_price_table[i] == "":
+                apartment_details_price_table[i] = None
+                currency.append(None)
             elif any(c.isalpha() for c in apartment_details_price_table[i]):
                 filtered_str = filter(str.isdigit, apartment_details_price_table[i])
                 only_digit = "".join(filtered_str)
-                if only_digit == "" or only_digit == "None":
-                    apartment_details_price_table[i] = ""
+                if only_digit == "":
+                    apartment_details_price_table[i] = None
+                    currency.append(None)
                 else:
+                    currency.append(apartment_details_price_table[i].split()[-1])
                     apartment_details_price_table[i] = float(only_digit.replace(",", "."))
             else:
+                currency.append(apartment_details_price_table[i].split()[-1])
                 apartment_details_price_table[i] = float(apartment_details_price_table[i])
+
+        self.apartment_details['currency'] = currency
         return apartment_details_price_table
 
     def prepare_additional_info(self, apartment_details_add_info_table: pd.DataFrame, apartment_details_details_table: pd.DataFrame) -> pd.DataFrame:
@@ -211,30 +224,35 @@ class Preprocessing_Otodom:
             data frame with additional information.
         """
         for i in range(len(apartment_details_add_info_table)):
-            apartment_details_add_info_table[i] += apartment_details_details_table[i]
+            apartment_details_add_info_table[i] += apartment_details_details_table[i].replace(":",": ")
         return apartment_details_add_info_table
 
     def create_table(self):
         otodom_table = pd.DataFrame()
         params_tables_otodom = self.prepare_table_information(table=self.remove_new_line_marks()['details'])
         otodom_table['area'] = self.apartment_details['Area']
+        otodom_table['description'] = self.apartment_details['description']
+        otodom_table['latitude'] = self.apartment_details['lat']
+        otodom_table['longitude'] = self.apartment_details['lng']
+        otodom_table['link'] = self.apartment_details['link']
         otodom_table['price'] = self.extract_price(self.remove_new_line_marks()['price'])
-        otodom_table['rooms'] = self.apartment_details['Rooms_num']
+        otodom_table['currency'] = self.apartment_details['currency']
+        otodom_table['rooms'] = params_tables_otodom['Liczba pokoi']
+        otodom_table['floors_number'] = params_tables_otodom['Liczba pięter']
         otodom_table['floor'] = params_tables_otodom['Piętro']
-        otodom_table['floors_all'] = params_tables_otodom['Liczba pięter']
-        otodom_table['building_type'] = params_tables_otodom['Rodzaj zabudowy']
-        otodom_table['building_material'] = params_tables_otodom['Materiał budynku']
-        otodom_table['building_year'] = params_tables_otodom['Rok budowy']
-
-        #otodom_table["city"] = params_tables_otodom["Rok budowy"]
-        #otodom_table["address"] = params_tables_otodom["Rok budowy"]
-
+        otodom_table['type_building'] = params_tables_otodom['Rodzaj zabudowy']
+        otodom_table['material_building'] = params_tables_otodom['Materiał budynku']
+        otodom_table['year'] = params_tables_otodom['Rok budowy']
         otodom_table['headers'] = self.apartment_details['additional_info_headers']
         otodom_table['additional_info'] = self.prepare_additional_info(apartment_details_add_info_table=self.apartment_details['additional_info'], apartment_details_details_table = self.apartment_details['details'])
-        otodom_table['description'] = self.apartment_details['description']
-        otodom_table['lat'] = self.apartment_details['lat']
-        otodom_table['lng'] = self.apartment_details['lng']
-        otodom_table['link'] = self.apartment_details['link']
+        otodom_table['city'] = self.apartment_details['city']
+        otodom_table['address'] = self.apartment_details['address']
+        otodom_table['district'] = self.apartment_details['district']
+        otodom_table['voivodeship'] = self.apartment_details['voivodeship']
+        otodom_table['active'] = 'Yes'
+        otodom_table['scrape_date'] = str(datetime.now().date())
+        otodom_table['inactive_date'] = '-'
+        otodom_table['pageName'] = 'Otodom'
         return otodom_table
 
 
