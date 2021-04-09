@@ -55,25 +55,36 @@ create_activeLinks = "CREATE TABLE active_links (link_id INT IDENTITY PRIMARY KE
                                            link NVARCHAR(256) NOT NULL)"
 
 create_preprocessing_offers = "CREATE TABLE preprocessing_offers (offer_id INT IDENTITY PRIMARY KEY," \
+"area FLOAT (2)," \
+"description NVARCHAR (4000)," \
+"latitude FLOAT," \
+"longitude FLOAT," \
+"link NVARCHAR (128)," \
+"price FLOAT (2)," \
+"currency NVARCHAR(128)," \
+"rooms FLOAT," \
+"floors_number FLOAT," \
+"floor FLOAT," \
+"type_building NVARCHAR (128)," \
+"material_building NVARCHAR (128)," \
+"year FLOAT," \
+"headers NVARCHAR (256)," \
+"additional_info NVARCHAR (4000)," \
+"city NVARCHAR (128)," \
+"address NVARCHAR (128)," \
+"district NVARCHAR (128)," \
+"voivodeship NVARCHAR (128)," \
+"active NVARCHAR (128)," \
+"scrape_date NVARCHAR (128)," \
+"inactive_date NVARCHAR (128)," \
+"pageName NVARCHAR (128))"
+
+create_missing_links = "CREATE TABLE missing_links (link_id INT IDENTITY PRIMARY KEY," \
 "pageName NVARCHAR (128) NOT NULL," \
-"area NVARCHAR (128) NOT NULL," \
-"description NVARCHAR (2048) NOT NULL," \
-"latitude NVARCHAR (128) NOT NULL," \
-"longitude NVARCHAR (128) NOT NULL," \
 "link NVARCHAR (128) NOT NULL," \
-"price NVARCHAR (128) NOT NULL," \
-"rooms NVARCHAR (128) NOT NULL," \
-"floors_number NVARCHAR (128) NOT NULL," \
-"floor NVARCHAR (128) NOT NULL," \
-"type_building NVARCHAR (128) NOT NULL," \
-"material_building NVARCHAR (128) NOT NULL," \
-"year NVARCHAR (128) NOT NULL," \
-"headers NVARCHAR (256) NOT NULL," \
-"additional_info NVARCHAR (2048) NOT NULL," \
-"city NVARCHAR (128) NOT NULL," \
-"address NVARCHAR (128) NOT NULL," \
-"district NVARCHAR (128) NOT NULL," \
-"voivodeship NVARCHAR (128) NOT NULL)"
+"link_type NVARCHAR (128) NOT NULL)"
 
 create_table(engine, create_activeLinks)
+conn.execute("DROP TABLE preprocessing_offers")
 create_table(engine, create_preprocessing_offers)
+create_table(engine, create_missing_links)
