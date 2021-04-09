@@ -251,7 +251,7 @@ class ScrapingMorizon(Scraper):
             soup_offers = self.enterPage_parser(page_link)
                
             properties_links = soup_offers.findAll(class_ = "property_link")
-            properties_links = [link.get("href") for link in properties_links if("offera" in link.get("href"))]
+            properties_links = [link.get("href") for link in properties_links if("oferta" in link.get("href"))]
             
             all_properties_links = properties_links
     
@@ -280,10 +280,12 @@ class ScrapingMorizon(Scraper):
             results_pages = pages
         else:
             results_pages = self.get_pages()
-            
+
         results_offers = self.scraping_all_links(self.scraping_offers_links,results_pages)
+        print(results_offers[1])
         missed_offers = [offers for offers in results_offers if "page" in offers]
-        results_offers = np.concatenate([properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0 )
+        results_offers = [properties for properties in self.flatten(results_offers) if ("page" not in properties)]
+
 
         missed_offers_list = self.missed_links_all(missed_offers = missed_offers, func = self.missed_offers_pages, details = False, offers = True, func_pages_or_offers = self.scraping_offers_links)
         results_offers = self.join_missed_with_scraped(missed_offers_list,results_offers)
@@ -483,4 +485,16 @@ class ScrapingMorizon(Scraper):
         except:
             return "None"
 
+
+# Remove that
+if "__name__" == "__main__":
+    morizon_scraper = ScrapingMorizon(page='https://www.morizon.pl/do-wynajecia/mieszkania/', page_name='https://www.morizon.pl', max_threads=30)
+
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
+    pages = morizon_scraper.get_pages()
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
 

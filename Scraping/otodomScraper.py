@@ -252,6 +252,8 @@ class ScrapingOtodom(Scraper):
             splitted[len(splitted) - 1][1] += 1
 
         # Scrape details
+        results = list()
+
         for split in splitted[skip_n_elements:]:
             results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,
                                                       results_offers[split[0]:split[1]])
@@ -274,7 +276,10 @@ class ScrapingOtodom(Scraper):
             # Save scraped details as csv file
             results_details = [result for result in results_details if
                                (result != "Does not exist") & (result != None) & ("www.otodom.pl" not in result)]
-            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
+            results.append(pd.DataFrame(results_details))
+
+        return results
+
 
     # Verify weather there is possibility to extract specific information from json
     def json_information_exception(self, obj: Dict[str, str], path: List[str], is_spatial: bool,
@@ -547,27 +552,4 @@ class ScrapingOtodom(Scraper):
         missed_links = [details for details in links if "www.otodom.pl" in details]
 
         return links, missed_links
-
-
-# Remove that
-if "__name__" == "__main__":
-    otodom_pages = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
-
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
-    oferty = otodom_pages.get_offers()
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
-
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
-    oto_pag = otodom_pages.get_details(500, offers=oferty)
-    now = datetime.now()
-
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
-    print(len(oto_pag))
 
