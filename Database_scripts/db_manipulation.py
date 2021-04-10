@@ -237,13 +237,15 @@ class DatabaseManipulation:
                 for index, row in offers[split[0]:split[1]].iterrows():
                     print(row)
                     conn.execute("INSERT INTO " + self.table_name_offers + "\
-                                         ([area],[description],[latitude],[longitude],[link],[price],[currency], [rooms],"
+                                         ([area],[description_1], [description_2], [description_3], [description_4],"
+                                                                           " [latitude],[longitude],[link],[price],[currency], [rooms],"
                                                                           "[floors_number],[floor],[type_building],[material_building],"
                                                                           "[year],[headers],[additional_info],[city],[address],"
                                                                           "[district],[voivodeship],[active], [scrape_date],"
                                                                           "[inactive_date], [pageName])\
-                                         Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\
-                                         ", (row["area"], row["description"], row["latitude"], row["longitude"],
+                                         Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\
+                                         ", (row["area"], row["description_1"], row["description_2"], row["description_3"],
+                                             row["description_4"], row["latitude"], row["longitude"],
                                              row["link"], row["price"], row["currency"], row["rooms"], row["floors_number"],
                                              row["floor"],row["type_building"], row["material_building"], row["year"],
                                              row["headers"], row["additional_info"], row["city"], row["address"],
