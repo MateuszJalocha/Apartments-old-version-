@@ -28,7 +28,7 @@ if __name__ == "__main__":
                                                  insert_columns = ["pageName", "link"])
     scraped = otodom_offers.get_details(offers=otodom_offers,split_size=500)
 
-    database_manipulation.push_to_database_offers(offers=scraped,insert_columns=["area", "description", "latitude","longitude",
+    database_manipulation.push_to_database_offers(offers=scraped,insert_columns=["area", "description_1", "description_2", "latitude","longitude",
                                                                                  "link", "price", "currency","rooms", "floors_number",
                                                                                  "floor", "type_building", "material_building",
                                                                                  "year", "headers", "additional_info", "city",
