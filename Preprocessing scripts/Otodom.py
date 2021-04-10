@@ -227,11 +227,30 @@ class Preprocessing_Otodom:
             apartment_details_add_info_table[i] += apartment_details_details_table[i].replace(":",": ")
         return apartment_details_add_info_table
 
+    def prepare_description_table(self, apartment_details_description_table: pd.DataFrame) -> pd.DataFrame:
+      description_1 = []
+      description_2 = []
+
+      for i in range(len(apartment_details_description_table)):
+        if len(apartment_details_description_table[i]) > 4000:
+          description_1.append(apartment_details_description_table[i][:3999])
+          description_2.append(apartment_details_description_table[i][3999:])
+        else:
+          description_1.append(apartment_details_description_table[i])
+          description_2.append(None)
+
+      self.apartment_details['description_2'] = description_2
+
+      return description_1
+
+
+
     def create_table(self):
         otodom_table = pd.DataFrame()
         params_tables_otodom = self.prepare_table_information(table=self.remove_new_line_marks()['details'])
         otodom_table['area'] = self.apartment_details['Area']
-        otodom_table['description'] = self.apartment_details['description']
+        otodom_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
+        otodom_table['description_2'] = self.apartment_details['description_2']
         otodom_table['latitude'] = self.apartment_details['lat']
         otodom_table['longitude'] = self.apartment_details['lng']
         otodom_table['link'] = self.apartment_details['link']
