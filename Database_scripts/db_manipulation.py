@@ -131,7 +131,7 @@ class DatabaseManipulation:
             information that names are incorrect
         """
         #Create splits to insert big dataset
-        splitted = self.create_split(dataFrame, self.split_size)
+        splitted = self.create_split(dataFrame)
 
         #Verify corectness of column names
         if sum(dataFrame.columns == column_names) == len(column_names):
@@ -173,8 +173,17 @@ class DatabaseManipulation:
 
         #Find links to scrape and remove
         activeLinks = pd.DataFrame({"link": activeLinks})
-        to_scrape = activeLinks[~activeLinks.stack().isin(links_database.iloc[:,2]).unstack()].dropna()
-        to_remove = links_database.iloc[:,2][~links_database.iloc[:,2].isin(activeLinks["link"])].dropna()
+
+        try:
+            to_scrape = activeLinks[~activeLinks.stack().isin(links_database.iloc[:,2]).unstack()].dropna()
+        except:
+            to_scrape = activeLinks
+
+        try:
+            to_remove = links_database.iloc[:,2][~links_database.iloc[:,2].isin(activeLinks["link"])].dropna()
+        except:
+            to_remove = []
+
         conn.close()
 
         return to_scrape, to_remove
@@ -198,10 +207,12 @@ class DatabaseManipulation:
 
         #Delete links
         conn = self.engine.connect()
-        queries_delete = "DELETE FROM "+self.table_name_links+" WHERE [link] = '"+removeLinks+"'"
 
-        for query in queries_delete:
-            conn.execute(query)
+        if len(removeLinks) != 0:
+            queries_delete = "DELETE FROM "+self.table_name_links+" WHERE [link] = '"+removeLinks+"'"
+
+            for query in queries_delete:
+                conn.execute(query)
 
         #Insert links
         newLinks = pd.DataFrame({"pageName": page_name, "link": newLinks["link"]})
@@ -271,10 +282,10 @@ class DatabaseManipulation:
         """
 
         #Find which links has to be scraped and which to removed
-        scrape, remove = self.find_links_to_scrape(activeLinks = activeLinks, page_name = page_name, split_size = self.split_size)
+        scrape, remove = self.find_links_to_scrape(activeLinks = activeLinks, page_name = page_name)
 
         #Delete and replace links
-        self.replace_links(newLinks = scrape, removeLinks = remove, page_name = page_name, insert_columns = insert_columns, split_size = self.split_size)
+        self.replace_links(newLinks = scrape, removeLinks = remove, page_name = page_name, insert_columns = insert_columns)
 
         #Update table with offers
         self.replace_offers(removeLinks = remove)
