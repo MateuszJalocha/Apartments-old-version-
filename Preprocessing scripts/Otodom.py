@@ -3,21 +3,17 @@ import numpy as np
 import re
 import os
 from datetime import datetime
+from textwrap import wrap
 start_time = datetime.now()
 
-path = 'C:/Users/Estera/OneDrive/magisterka/dane_mieszkania/Otodom/'
+path = 'C:/Users/User/Desktop/dane_otodom_najnowsze/'
 '''
 # Read filenames from the given path
 data_files = os.listdir('C:/Users/Estera/OneDrive/magisterka/dane_mieszkania/Otodom/')
-
-
 def load_files(filenames):
     for filename in filenames:
         yield pd.read_csv(path+filename)
-
-
 data = pd.concat(load_files(data_files), ignore_index=True,axis=0)
-
 apartments = data.copy().drop(['Unnamed: 0'],axis=1)
 '''
 apartments1 = pd.read_csv(path+'mieszkania503.csv',
@@ -39,27 +35,20 @@ class Preprocessing_Otodom:
         ----------
         apartment_details: name of apartments table
         information_types: columns of apartments table
-
         Methods
         -------
         remove_quotation_marks() ->:
             Remove quotation marks from columns.
-
         numeric_information():
             Replace numeric information to float.
-
         remove_new_line_marks():
             Remove new line marks from columns.
-
         prepare_table_information(table):
             Create dictionary with table information.
-
         extract_price(apartment_details_price_table):
             Extract price from a string and convert to float.
-
         prepare_additional_info(apartment_details_add_info_table, apartment_details_details_table):
             Prepare column with additional information.
-
         create_table():
             Create preprocessing table.
         """
@@ -190,6 +179,7 @@ class Preprocessing_Otodom:
             data frame where price information type was changed to float.
         """
         currency = []
+        print(apartment_details_price_table)
         for i in range(len(apartment_details_price_table)):
             if apartment_details_price_table[i] == "":
                 apartment_details_price_table[i] = None
@@ -228,22 +218,29 @@ class Preprocessing_Otodom:
         return apartment_details_add_info_table
 
     def prepare_description_table(self, apartment_details_description_table: pd.DataFrame) -> pd.DataFrame:
-      description_1 = []
-      description_2 = []
-
-      for i in range(len(apartment_details_description_table)):
-        if len(apartment_details_description_table[i]) > 4000:
-          description_1.append(apartment_details_description_table[i][:3999])
-          description_2.append(apartment_details_description_table[i][3999:])
-        else:
-          description_1.append(apartment_details_description_table[i])
-          description_2.append(None)
-
-      self.apartment_details['description_2'] = description_2
-
-      return description_1
+        description_1 = []
+        description_2 = []
+        description_3 = []
+        description_4 = []
 
 
+        for i in range(len(apartment_details_description_table)):
+            desc_list = [None, None, None, None]
+            description_splitted = wrap(apartment_details_description_table[i], 4000)
+
+            for element in range(len(description_splitted)):
+                desc_list[element] = description_splitted[element]
+
+            description_1.append(desc_list[0])
+            description_2.append(desc_list[1])
+            description_3.append(desc_list[2])
+            description_4.append(desc_list[3])
+
+        self.apartment_details['description_2'] = description_2
+        self.apartment_details['description_3'] = description_3
+        self.apartment_details['description_4'] = description_4
+
+        return description_1
 
     def create_table(self):
         otodom_table = pd.DataFrame()
@@ -251,6 +248,8 @@ class Preprocessing_Otodom:
         otodom_table['area'] = self.apartment_details['Area']
         otodom_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
         otodom_table['description_2'] = self.apartment_details['description_2']
+        otodom_table['description_3'] = self.apartment_details['description_3']
+        otodom_table['description_4'] = self.apartment_details['description_4']
         otodom_table['latitude'] = self.apartment_details['lat']
         otodom_table['longitude'] = self.apartment_details['lng']
         otodom_table['link'] = self.apartment_details['link']
@@ -275,8 +274,9 @@ class Preprocessing_Otodom:
         return otodom_table
 
 
+
 if "__name__" == "__main__":
-    otodom_preprocess = Preprocessing_Otodom(apartment_details=apartments, information_types=apartments.columns)
+    otodom_preprocess = Preprocessing_Otodom(apartment_details=apartments.where(pd.notnull(apartments),None), information_types=apartments.columns)
 
     start_time = datetime.now()
     otodom_table = otodom_preprocess.create_table()
