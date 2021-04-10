@@ -290,11 +290,11 @@ class Scraper:
         print("Scraper, missed: ", missed)
         if len(missed) > 1:
             missed = [properties for properties in self.flatten(missed) if properties != None]
-            scraped = np.concatenate([scraped, missed], axis=0)
+            scraped = np.concatenate([self.flatten(scraped), missed], axis=0)
         elif len(missed) == 1:
-            scraped = np.concatenate([scraped, missed[0]], axis=0)
+            scraped = np.concatenate([self.flatten(scraped), missed[0]], axis=0)
         elif len(missed) == 0:
-            scraped = scraped
+            scraped = self.flatten(scraped)
 
         print(len(scraped))
         return scraped
