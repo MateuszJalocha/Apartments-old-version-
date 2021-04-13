@@ -19,17 +19,33 @@ if __name__ == "__main__":
                                                  table_name_offers = "preprocessing_offers", split_size = 1000)
 
     #Morizon
-    #morizon_scraper = ScrapingMorizon(page = 'https://www.morizon.pl/do-wynajecia/mieszkania',page_name = 'https://www.morizon.pl',max_threads = 30)
+    morizon_scraper = ScrapingMorizon(page = 'https://www.morizon.pl/do-wynajecia/mieszkania',page_name = 'https://www.morizon.pl',max_threads = 30)
+    morizon_pages = morizon_scraper.get_pages()
+    morizon_offers = morizon_scraper.get_offers(pages=morizon_pages, split_size=100)
+    to_scrape = database_manipulation.push_to_database_links(activeLinks=morizon_offers, page_name="Morizon",
+                                                             insert_columns=["pageName", "link"])
+
+    morizon_scraped = morizon_scraper.get_details(offers=to_scrape, split_size=500)
+
+    database_manipulation.push_to_database_offers(offers=morizon_scraped,
+                                                  insert_columns=["area", "description_1", "description_2",
+                                                                  "description_3", "description_4", "latitude", "longitude",
+                                                                  "link", "price", "currency", "rooms", "floors_number",
+                                                                  "floor", "type_building", "material_building",
+                                                                  "year", "headers", "additional_info", "city",
+                                                                  "address", "district", "voivodeship", "active",
+                                                                  "scrape_date", "inactive_date", "pageName"])
 
     #Otodom
     otodom_scraper = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
-    otodom_offers = otodom_scraper.get_offers()
+    otodom_pages = otodom_scraper.get_pages()
+    otodom_offers = otodom_scraper.get_offers(pages=otodom_pages[0:200], split_size=100)
     to_scrape = database_manipulation.push_to_database_links(activeLinks = otodom_offers, page_name = "Otodom",
                                                  insert_columns = ["pageName", "link"])
-    scraped = otodom_offers.get_details(offers=otodom_offers,split_size=500)
 
-    database_manipulation.push_to_database_links(activeLinks = list(otodom_offers["link"]), page_name = "Otodom", insert_columns = ["pageName", "link"])
-    database_manipulation.push_to_database_offers(offers=scraped,insert_columns=["area", "description_1", "description_2",
+    otodom_scraped = otodom_offers.get_details(offers=to_scrape,split_size=500)
+
+    database_manipulation.push_to_database_offers(offers=otodom_scraped,insert_columns=["area", "description_1", "description_2",
                                                                                  "description_3", "description_4","latitude","longitude",
                                                                                  "link", "price", "currency","rooms", "floors_number",
                                                                                  "floor", "type_building", "material_building",
@@ -37,25 +53,3 @@ if __name__ == "__main__":
                                                                                  "address", "district", "voivodeship", "active",
                                                                                  "scrape_date", "inactive_date", "pageName"])
 
-
-    database = "DATABASE"
-    params = urllib.parse.quote_plus(
-        'Driver=%s;' % config.get(database, 'DRIVER') +
-        'Server=%s,1433;' % config.get(database, 'SERVER') +
-        'Database=%s;' % config.get(database, 'DATABASE') +
-        'Uid=%s;' % config.get(database, 'USERNAME') +
-        'Pwd={%s};' % config.get(database, 'PASSWORD') +
-        'Encrypt=yes;' +
-        'TrustServerCertificate=no;' +
-        'Connection Timeout=30;')
-
-    conn_str = 'mssql+pyodbc:///?odbc_connect=' + params
-    engine = create_engine(conn_str)
-
-    conn = engine.connect()
-
-    conn.execute("INSERT INTO Active_links ([PageName], [Link]) VALUES ('Morizon', 'DUPA')")
-
-    #manipulatedata = DatabaseManipulation(config, "DATABASE", "Active_links")
-    #manipulatedata.push_to_database(activeLinks=zmiana["Link"].to_list(), page_name="Morizon",
-    #                               insert_columns=["PageName", "Link"], split_size=1000)
