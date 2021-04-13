@@ -29,7 +29,7 @@ apartments = pd.concat([apartments1, apartments2, apartments3], ignore_index=Tru
 
 class Preprocessing_Otodom:
     """
-        A class used to preprocess offers information from otodom.pl
+        A class used to preprocess offers information from Otodom.pl.
         ...
         Attributes
         ----------
@@ -37,20 +37,24 @@ class Preprocessing_Otodom:
         information_types: columns of apartments table
         Methods
         -------
-        remove_quotation_marks() ->:
+        remove_quotation_marks() -> pd.DataFrame:
             Remove quotation marks from columns.
-        numeric_information():
+        numeric_information() -> pd.DataFrame:
             Replace numeric information to float.
-        remove_new_line_marks():
+        remove_new_line_marks() -> pd.DataFrame:
             Remove new line marks from columns.
-        prepare_table_information(table):
-            Create dictionary with table information.
-        extract_price(apartment_details_price_table):
-            Extract price from a string and convert to float.
-        prepare_additional_info(apartment_details_add_info_table, apartment_details_details_table):
-            Prepare column with additional information.
-        create_table():
-            Create preprocessing table.
+        prepare_table_information(table) -> pd.DataFrame:
+            Change table information from list to dictionary and create external table from it.
+        get_number(price_information: str) -> str:
+            Get only numeric information of price from string.
+        extract_price(apartment_details_price_table) -> pd.DataFrame:
+            Extract price and currency from a string and convert price to float.
+        prepare_additional_info(apartment_details_add_info_table, apartment_details_details_table) -> pd.DataFrame:
+            Join additional information and details to additional information.
+        prepare_description_table(apartment_details_description_table: pd.DataFrame) -> pd.DataFrame:
+            Split description of 4000 characters to several columns and if record has more than 16000 characters check the language and get only polish description.
+        create_table() -> pd.DataFrame:
+            Create final preprocessing table.
         """
     def __init__(self, apartment_details, information_types):
         """
@@ -65,7 +69,7 @@ class Preprocessing_Otodom:
         self.information_types = information_types
 
     def remove_quotation_marks(self) -> pd.DataFrame:
-        """Remove quotation marks from columns
+        """Remove quotation marks from columns.
          Parameters
          ----------
          information_types: str
@@ -90,7 +94,7 @@ class Preprocessing_Otodom:
 
 
     def numeric_information(self) -> pd.DataFrame:
-        """Change numeric information to float
+        """Change numeric information to float.
         Parameters
         ----------
         information_types: str
@@ -106,16 +110,15 @@ class Preprocessing_Otodom:
         apartment_details = self.remove_quotation_marks()
         for position, information_type in enumerate(information_types):
             try:
-                for index in range(len(apartment_details)):
-                    apartment_details.loc[:, information_type][index] = float(apartment_details.loc[:, information_type][index])
+              [float(apartment_details.loc[:, information_type][index]) for index in range(len(apartment_details))]
             except:
-                if information_type != information_types[-1]:
-                    information_type = information_types[position+1]
+              if information_type != information_types[-1]:
+                information_type = information_types[position+1]
         return apartment_details
 
 
     def remove_new_line_marks(self) -> pd.DataFrame:
-        """Remove new line marks from columns
+        """Remove new line marks from columns.
         Parameters
         ----------
         information_types: str
@@ -133,13 +136,13 @@ class Preprocessing_Otodom:
             for index in range(len(apartment_details)):
                 try:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][
-                        index].replace('\\n\\n', ', ').replace(', ,', ',')
+                        index].replace('\\n\\n', ', ').replace(', ,', ',').replace('\\xa0',' ')
                 except:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
         return apartment_details
 
     def prepare_table_information(self, table: pd.DataFrame) -> pd.DataFrame:
-        """
+        """Change table information from list to dictionary and create external table from it.
         Parameters
         ----------
         table: pd.DataFrame
@@ -167,8 +170,26 @@ class Preprocessing_Otodom:
 
         return params_table.where(pd.notnull(params_table),None)
 
-    def extract_price(self, apartment_details_price_table: pd.DataFrame) -> pd.DataFrame:
+    def get_number(self, price_information: str) -> str:
+        """Get only numeric information of price from string.
+        Parameters
+        ----------
+        price_information: str
+            string with numeric and string price information.
+        Returns
+        ------
+        price_number: str
+            string with numeric price information.
         """
+        signs = [',','.']
+        if (price_information in signs):
+          price_number = price_information
+        else:
+          price_number = str.isdigit(price_information)
+        return price_number
+
+    def extract_price(self, apartment_details_price_table: pd.DataFrame) -> pd.DataFrame:
+        """Extract price and currency from a string and convert price to float.
         Parameters
         ----------
         apartment_details_price_table: pd.DataFrame
@@ -178,30 +199,32 @@ class Preprocessing_Otodom:
         apartment_details_price_table: pd.DataFrame
             data frame where price information type was changed to float.
         """
+
         currency = []
-        print(apartment_details_price_table)
         for i in range(len(apartment_details_price_table)):
-            if apartment_details_price_table[i] == "":
+          try:
+            filtered_str = filter(self.get_number, apartment_details_price_table[i])
+            only_digit = "".join(filtered_str)
+              
+            if only_digit == ""  or only_digit == None:
                 apartment_details_price_table[i] = None
                 currency.append(None)
-            elif any(c.isalpha() for c in apartment_details_price_table[i]):
-                filtered_str = filter(str.isdigit, apartment_details_price_table[i])
-                only_digit = "".join(filtered_str)
-                if only_digit == "":
-                    apartment_details_price_table[i] = None
-                    currency.append(None)
-                else:
-                    currency.append(apartment_details_price_table[i].split()[-1])
-                    apartment_details_price_table[i] = float(only_digit.replace(",", "."))
             else:
                 currency.append(apartment_details_price_table[i].split()[-1])
-                apartment_details_price_table[i] = float(apartment_details_price_table[i])
+                apartment_details_price_table[i] = float(only_digit.replace(",", "."))
+          except:
+            if apartment_details_price_table[i] == "" or apartment_details_price_table[i] == None:
+              apartment_details_price_table[i] = None
+              currency.append(None)
+            else:
+              currency.append(apartment_details_price_table[i].split()[-1])
+              apartment_details_price_table[i] = float(apartment_details_price_table[i].replace(",", "."))
 
         self.apartment_details['currency'] = currency
         return apartment_details_price_table
 
     def prepare_additional_info(self, apartment_details_add_info_table: pd.DataFrame, apartment_details_details_table: pd.DataFrame) -> pd.DataFrame:
-        """
+        """Join additional information and details to additional information.
         Parameters
         ----------
         apartment_details_add_info_table: pd.DataFrame
@@ -218,6 +241,16 @@ class Preprocessing_Otodom:
         return apartment_details_add_info_table
 
     def prepare_description_table(self, apartment_details_description_table: pd.DataFrame) -> pd.DataFrame:
+        """Split description of 4000 characters to several columns and if record has more than 16000 characters check the language and get only polish description.
+        Parameters
+        ----------
+        apartment_details_description_table: pd.DataFrame
+            column with description.
+        Returns
+        ------
+        description_1: List
+            list with tha first part of description.
+        """
         description_1 = []
         description_2 = []
         description_3 = []
@@ -225,16 +258,35 @@ class Preprocessing_Otodom:
 
 
         for i in range(len(apartment_details_description_table)):
-            desc_list = [None, None, None, None]
+          desc_list = [None, None, None, None]
+          if len(apartment_details_description_table[i]) > 16000:
+
+            description = apartment_details_description_table[i]
+            text = ' '.join(description.replace(",","").replace("-","").split(" ")).split()
+            elements = [text[x:x+6] for x in range(0, len(text),6)]
+
+            pl = []
+            for index, element in enumerate(elements):
+              element = list(map(str.lower,element))
+              try:
+                language = detect(" ".join(element))
+              except:
+                language = 'pl'
+              if language =='pl':
+                pl.append(" ".join(element))
+            
+            description_splitted = wrap(" ".join(pl), 4000)
+
+          else:
             description_splitted = wrap(apartment_details_description_table[i], 4000)
 
-            for element in range(len(description_splitted)):
-                desc_list[element] = description_splitted[element]
+          for element in range(len(description_splitted)):
+              desc_list[element] = description_splitted[element]
 
-            description_1.append(desc_list[0])
-            description_2.append(desc_list[1])
-            description_3.append(desc_list[2])
-            description_4.append(desc_list[3])
+          description_1.append(desc_list[0])
+          description_2.append(desc_list[1])
+          description_3.append(desc_list[2])
+          description_4.append(desc_list[3])
 
         self.apartment_details['description_2'] = description_2
         self.apartment_details['description_3'] = description_3
@@ -243,6 +295,12 @@ class Preprocessing_Otodom:
         return description_1
 
     def create_table(self):
+        """Create final preprocessing table.
+        Returns
+        ------
+        otodom_table: pd.DataFrame
+            final preprocessing table with None instead of empty strings.
+        """
         otodom_table = pd.DataFrame()
         params_tables_otodom = self.prepare_table_information(table=self.remove_new_line_marks()['details'])
         otodom_table['area'] = self.apartment_details['Area']
@@ -271,8 +329,7 @@ class Preprocessing_Otodom:
         otodom_table['scrape_date'] = str(datetime.now().date())
         otodom_table['inactive_date'] = '-'
         otodom_table['pageName'] = 'Otodom'
-        return otodom_table
-
+        return otodom_table.replace({"": None})
 
 
 if "__name__" == "__main__":
