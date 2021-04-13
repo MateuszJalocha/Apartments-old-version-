@@ -58,7 +58,7 @@ class ScrapingMorizon(Scraper):
     missed_details_func(links: List[str]) -> Tuple[List[str], List[str]]:
         Scrape missed details links
 
-    get_details(split_size: int, skip_n_elements: int = 0, offers: List[str] = []) -> None:
+    get_details(split_size: int, offers: List[str] = []) -> None:
         The method called up by the user to download all details about apartments.
 
     scraping_offers_details(link: str) -> Union[DefaultDict[str,str], str]:
@@ -261,11 +261,13 @@ class ScrapingMorizon(Scraper):
         return all_properties_links
     
     #Get districts and cities links
-    def get_offers(self, pages: List[str] = []) -> List[str]:
+    def get_offers(self, split_size: int, pages: List[str] = []) -> List[str]:
         """The method called up by the user to download all links of the properties from morizon.pl
 
         Parameters
         ----------
+        split_size: int
+           value divided by total number of links it is used to create splits to relieve RAM memory
         pages: list, optional
             for which pages the links to the properties are to be downloaded (default for all)
 
@@ -281,16 +283,25 @@ class ScrapingMorizon(Scraper):
         else:
             results_pages = self.get_pages()
 
-        results_offers = self.scraping_all_links(self.scraping_offers_links,results_pages)
-        print(results_offers[1])
-        missed_offers = [offers for offers in results_offers if "page" in offers]
-        results_offers = [properties for properties in self.flatten(results_offers) if ("page" not in properties)]
+        #Create splits to relieve RAM memory
+        splitted = self.create_split(links=results_pages, split_size=split_size)
+
+        results_offers_all = list()
+        for split in splitted:
+            if len(split) == 1:
+                results_offers = self.scraping_all_links(self.scraping_offers_links,results_pages[split[0]:split[1]])
+            else:
+                results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
+            missed_offers = [offers for offers in results_offers if "page" in offers]
+            results_offers = [properties for properties in self.flatten(results_offers) if ("page" not in properties)]
 
 
-        missed_offers_list = self.missed_links_all(missed_offers = missed_offers, func = self.missed_offers_pages, details = False, offers = True, func_pages_or_offers = self.scraping_offers_links)
-        results_offers = self.join_missed_with_scraped(missed_offers_list,results_offers)
+            missed_offers_list = self.missed_links_all(missed_offers = missed_offers, func = self.missed_offers_pages, details = False, offers = True, func_pages_or_offers = self.scraping_offers_links)
+            results_offers = self.join_missed_with_scraped(missed_offers_list,results_offers)
 
-        return self.flatten(results_offers)
+            results_offers_all.append(results_offers)
+
+        return self.flatten(results_offers_all)
     
     #Scrape missed details links
     def missed_details_func(self, links: List[str]) -> Tuple[List[str], List[str]]:
@@ -316,7 +327,7 @@ class ScrapingMorizon(Scraper):
         return links, missed_links
 
     #Get apartments details
-    def get_details(self, split_size: int, skip_n_elements: int = 0, offers: List[str] = []) -> None:
+    def get_details(self, split_size: int, offers: List[str] = []) -> None:
         """The method called up by the user to download all details about apartments.
          Results are saved to number_of_links/split.csv files
 
@@ -324,31 +335,25 @@ class ScrapingMorizon(Scraper):
         ----------
         split_size: int
            value divided by total number of links it is used to create splits to relieve RAM memory
-        skip_n_elements: int, default(0)
-            how many first "splitted" elements should be omitted 
         offers: list, optional
             for which offers links the properties are to be downloaded (default for all)
 
         """
-        
+
         #Verify whether user want to specify specific pages
         if any(offers):
             results_offers = offers
         else:
             results_offers = self.get_offers()
-        
 
         #Create splits to relieve RAM memory
-        if(len(results_offers) < split_size):
-            splitted = range(0, len(results_offers))
-        else:
-            splitted = np.array_split(list(range(0,len(results_offers))), len(results_offers)/split_size)
-            splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]]  for elements in splitted]
-            splitted[len(splitted) - 1][1] += 1
-        
-        for split in splitted[skip_n_elements:]:
+        splitted = self.create_split(links=results_offers, split_size=split_size)
+        results_details_all = list()
+
+        for split in splitted:
+
             results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,results_offers[split[0]:split[1]])
-            
+
             #Assign to variables missed links and scraped properly
             missed_details = [details for details in results_details if "www.morizon.pl" in details]
             results_details = self.flatten([details for details in results_details if (details != None) & ("www.morizon.pl" not in details)])
@@ -363,7 +368,10 @@ class ScrapingMorizon(Scraper):
             
             #Save scraped details as csv file
             results_details = [result for result in results_details if (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
-            pd.DataFrame(results_details).to_csv("mieszkania" + str(split[1]) + ".csv")
+
+            results_details_all.append(results_details)
+
+        return pd.concat([pd.DataFrame(x) for x in results_details_all])
     
     #Scraping details from offer
     def scraping_offers_details(self, link: str) -> Union[DefaultDict[str,str], str]:
@@ -488,13 +496,16 @@ class ScrapingMorizon(Scraper):
 
 # Remove that
 if "__name__" == "__main__":
+
+
     morizon_scraper = ScrapingMorizon(page='https://www.morizon.pl/do-wynajecia/mieszkania/', page_name='https://www.morizon.pl', max_threads=30)
 
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     print("Current Time =", current_time)
-    pages = morizon_scraper.get_pages()
+    morizon_pages = morizon_scraper.get_pages()
+    morizon_offers = morizon_scraper.get_offers(pages=morizon_pages, split_size=100)
+    to_scrape = morizon_scraper.get_details(offers=morizon_offers, split_size=100)
     now = datetime.now()
     current_time = now.strftime("%H:%M:%S")
     print("Current Time =", current_time)
-

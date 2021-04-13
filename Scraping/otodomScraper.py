@@ -45,7 +45,7 @@ class ScrapingOtodom(Scraper):
     get_offers(pages: List = []) -> List[str]:
         The method called up by the user to download all links of the properties from otodom.pl
 
-    get_details(split_size: int, skip_n_elements: int = 0, offers: List = []) -> None:
+    get_details(split_size: int, offers: List = []) -> None:
         The method called up by the user to download all details about apartments.
 
     json_information_exception(obj: Dict[str, str], path: List[str], is_spatial: bool,
@@ -183,11 +183,13 @@ class ScrapingOtodom(Scraper):
         return all_properties_links
 
     # Get districts and cities links
-    def get_offers(self, pages: List = []) -> List[str]:
+    def get_offers(self, split_size: int, pages: List = []) -> List[str]:
         """The method called up by the user to download all links of the properties from otodom.pl
 
         Parameters
         ----------
+        split_size: int
+           value divided by total number of links it is used to create splits to relieve RAM memory
         pages: list, optional
             for which pages the links to the properties are to be downloaded (default for all)
 
@@ -203,25 +205,32 @@ class ScrapingOtodom(Scraper):
         else:
             results_pages = self.get_pages()
 
-        # Scrape all offers
-        results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
+        # Create splits to relieve RAM memory# Create splits to relieve RAM memory
+        splitted = self.create_split(links = results_pages, split_size = split_size)
+        results_offers_all = list()
 
-        #Verify weather there are some missing offers
-        missed_offers = [offers for offers in results_offers if "page" in offers]
-        results_offers = np.concatenate(
-            [properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0)
+        for split in splitted:
+            # Scrape all offers
+            results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages[split[0]:split[1]])
 
-        # Scrape missing offers and join them with scraped before
-        missed_offers_list = self.missed_links_all(missed_offers=missed_offers, func=self.missed_offers_pages,
-                                                   details=False, offers=True,
-                                                   func_pages_or_offers=self.scraping_offers_links)
+            #Verify weather there are some missing offers
+            missed_offers = [offers for offers in results_offers if "page" in offers]
+            results_offers = np.concatenate(
+                [properties for properties in results_offers if (properties != None) & ("page" not in properties)], axis=0)
 
-        results_offers = self.join_missed_with_scraped(missed_offers_list, results_offers)
+            # Scrape missing offers and join them with scraped before
+            missed_offers_list = self.missed_links_all(missed_offers=missed_offers, func=self.missed_offers_pages,
+                                                       details=False, offers=True,
+                                                       func_pages_or_offers=self.scraping_offers_links)
 
-        return self.flatten(results_offers)
+            results_offers = self.join_missed_with_scraped(missed_offers_list, results_offers)
+
+            results_offers_all.append(results_offers)
+
+        return self.flatten(results_offers_all)
 
     # Get apartments details
-    def get_details(self, split_size: int, skip_n_elements: int = 0, offers: List = []) -> None:
+    def get_details(self, split_size: int, offers: List = []) -> None:
         """The method called up by the user to download all details about apartments. Results are saved to
         number_of_links/split.csv files
 
@@ -229,8 +238,6 @@ class ScrapingOtodom(Scraper):
         ----------
         split_size: int
            value divided by total number of links it is used to create splits to relieve RAM memory
-        skip_n_elements: int, default(0)
-            how many first "splitted" elements should be omitted
         offers: list, optional
             for which offers links the properties details are to be scraped (default for all)
 
@@ -243,18 +250,11 @@ class ScrapingOtodom(Scraper):
             results_offers = self.get_offers()
 
         # Create splits to relieve RAM memory
-        if (len(results_offers) < split_size):
-            splitted = range(0, len(results_offers))
-        else:
-            splitted = np.array_split(list(range(0, len(results_offers))), len(results_offers) / split_size)
-            splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]] for
-                        elements in splitted]
-            splitted[len(splitted) - 1][1] += 1
-
-        # Scrape details
+        splitted = self.create_split(links=results_offers, split_size=split_size)
         results = list()
 
-        for split in splitted[skip_n_elements:]:
+        # Scrape details
+        for split in splitted:
             results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,
                                                       results_offers[split[0]:split[1]])
 
@@ -278,7 +278,7 @@ class ScrapingOtodom(Scraper):
                                (result != "Does not exist") & (result != None) & ("www.otodom.pl" not in result)]
             results.append(pd.DataFrame(results_details))
 
-        return results
+        return pd.concat(results)
 
 
     # Verify weather there is possibility to extract specific information from json
@@ -553,3 +553,18 @@ class ScrapingOtodom(Scraper):
 
         return links, missed_links
 
+# Remove that
+if "__name__" == "__main__":
+
+
+    otodom_scraper = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
+
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)
+    otodom_pages = otodom_scraper.get_pages()
+    otodom_offers = otodom_scraper.get_offers(pages=otodom_pages[0:200], split_size=100)
+    otodom_details = otodom_scraper.get_details(offers=otodom_offers[0:50], split_size=100)
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    print("Current Time =", current_time)

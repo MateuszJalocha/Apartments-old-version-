@@ -1,5 +1,3 @@
-# Scraping Morizon
-
 # Libraries
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
@@ -23,6 +21,9 @@ class Scraper:
 
     prepare_range(pages_names: List[str]) -> range:
         Prepare pages range
+
+    create_split(links: List[str], split_size: int) -> List[range]:
+        Create splits to relieve RAM memory
 
     flatten(result_to_flatt: List[List[str]]) -> Union[List[List[str]],List[str]]:
         Flatten a list
@@ -148,6 +149,33 @@ class Scraper:
             last_page = 1
 
         return range(1, last_page + 1)
+
+    # Create splits to relieve RAM memory
+    def create_split(self, links: object, split_size: object) -> object:
+        """Create splits to relieve RAM memory
+
+        Parameters
+        ----------
+        links: list
+            list with list based on which length of splits is created
+        split_size: int
+            value divided by total number of links it is used to create splits to relieve RAM memory
+        Returns
+        ------
+        list
+            list with ranges
+        """
+
+        if (len(links) < split_size):
+            splitted = [[0, len(links)]]
+        else:
+            splitted = np.array_split(list(range(0, len(links))), len(links) / split_size)
+            splitted = [[elements[0] - 1, elements[-1]] if elements[0] != 0 else [elements[0], elements[-1]] for
+                        elements in splitted]
+            splitted[len(splitted) - 1][1] += 1
+
+
+        return splitted
 
     # Flatten a list
     def flatten(self, result_to_flatt: List[List[str]]) -> Union[List[List[str]],List[str]]:
@@ -292,7 +320,7 @@ class Scraper:
             missed = [properties for properties in self.flatten(missed) if properties != None]
             scraped = np.concatenate([self.flatten(scraped), missed], axis=0)
         elif len(missed) == 1:
-            scraped = np.concatenate([self.flatten(scraped), missed[0]], axis=0)
+            scraped = np.concatenate([self.flatten(scraped), self.flatten(missed[0])], axis=0)
         elif len(missed) == 0:
             scraped = self.flatten(scraped)
 
