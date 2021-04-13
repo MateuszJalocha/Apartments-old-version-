@@ -136,7 +136,7 @@ class Preprocessing_Otodom:
             for index in range(len(apartment_details)):
                 try:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][
-                        index].replace('\\n\\n', ', ').replace(', ,', ',').replace('\\xa0',' ')
+                        index].replace('\\n\\n', ' ').replace(', ,', ',').replace('\\xa0',' ')
                 except:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
         return apartment_details
