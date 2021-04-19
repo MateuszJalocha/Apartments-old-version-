@@ -1,15 +1,18 @@
+
+
 import pandas as pd
 import numpy as np
 import re
 import os
 from datetime import datetime
 from textwrap import wrap
+from langdetect import detect
 start_time = datetime.now()
 
-path = 'C:/Users/User/Desktop/dane_otodom_najnowsze/'
-'''
+path = '/home/mateusz/Apartments/dane_otodom_najnowsze/'
+
 # Read filenames from the given path
-data_files = os.listdir('C:/Users/Estera/OneDrive/magisterka/dane_mieszkania/Otodom/')
+data_files = os.listdir(path)
 def load_files(filenames):
     for filename in filenames:
         yield pd.read_csv(path+filename)
@@ -26,7 +29,7 @@ apartments3 = pd.read_csv(path+'mieszkania1511.csv',
                     index_col=0)
 
 apartments = pd.concat([apartments1, apartments2, apartments3], ignore_index=True, axis=0)
-
+'''
 class Preprocessing_Otodom:
     """
         A class used to preprocess offers information from Otodom.pl.
@@ -85,10 +88,12 @@ class Preprocessing_Otodom:
         apartment_details = self.apartment_details
         for information_type in information_types:
             for index in range(len(apartment_details)):
-                try:
-                    apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][
-                        index].replace("'", "").strip('][')
-                except:
+                if type(apartment_details.loc[:, information_type][index])==list:
+                    try:
+                        apartment_details.loc[:, information_type][index] = ', '.join(apartment_details.loc[:, information_type][index])
+                    except:
+                        apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
+                else:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
         return apartment_details
 
@@ -136,7 +141,7 @@ class Preprocessing_Otodom:
             for index in range(len(apartment_details)):
                 try:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][
-                        index].replace('\\n\\n', ' ').replace(', ,', ',').replace('\\xa0',' ')
+                        index].replace('\n\n', ', ').replace(', ,', ',').replace('\\xa0',' ')
                 except:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
         return apartment_details
@@ -154,17 +159,24 @@ class Preprocessing_Otodom:
         """
         prepared_table = []
         params_table = pd.DataFrame()
-        for row in table:
-            list_info = row.replace(":", ", ").split(", ")
-            to_append = dict([x for x in zip(*[iter(list_info)]*2)])
-            prepared_table.append(to_append)
+        for index,row in enumerate(table):
+            #temp_row = ', '.join(row)
+            try:
+                list_info = row.replace(":", ", ").split(", ")
+                to_append = dict([x for x in zip(*[iter(list_info)]*2)])
+                prepared_table.append(to_append)
+            except:
+                prepared_table.append(None)
 
         for i in range(len(prepared_table)):
             column = []
             row = []
-            for key, value in prepared_table[i].items():
-                column.append(key.strip(':'))
-                row.append(value)
+            try:
+                for key, value in prepared_table[i].items():
+                    column.append(key.strip(':'))
+                    row.append(value)
+            except:
+                row.append(None)
             df_temp = pd.DataFrame([row], columns=column)
             params_table = pd.concat([params_table, df_temp], ignore_index=True)
 
@@ -182,7 +194,7 @@ class Preprocessing_Otodom:
             string with numeric price information.
         """
         signs = [',','.']
-        if (price_information in signs):
+        if price_information in signs:
           price_number = price_information
         else:
           price_number = str.isdigit(price_information)
@@ -202,22 +214,26 @@ class Preprocessing_Otodom:
 
         currency = []
         for i in range(len(apartment_details_price_table)):
+       #   if apartment_details_price_table[i] == 'None':
+        #      apartment_details_price_table[i] = None
+         #     currency.append(None)
+          #else:
           try:
-            filtered_str = filter(self.get_number, apartment_details_price_table[i])
+            filtered_str = filter(self.get_number, ''.join(apartment_details_price_table[i]))
             only_digit = "".join(filtered_str)
-              
             if only_digit == ""  or only_digit == None:
                 apartment_details_price_table[i] = None
                 currency.append(None)
             else:
-                currency.append(apartment_details_price_table[i].split()[-1])
+                currency.append(''.join(apartment_details_price_table[i]).split()[-1])
                 apartment_details_price_table[i] = float(only_digit.replace(",", "."))
+
           except:
             if apartment_details_price_table[i] == "" or apartment_details_price_table[i] == None:
               apartment_details_price_table[i] = None
               currency.append(None)
             else:
-              currency.append(apartment_details_price_table[i].split()[-1])
+              currency.append(''.join(apartment_details_price_table[i]).split()[-1])
               apartment_details_price_table[i] = float(apartment_details_price_table[i].replace(",", "."))
 
         self.apartment_details['currency'] = currency
@@ -237,7 +253,11 @@ class Preprocessing_Otodom:
             data frame with additional information.
         """
         for i in range(len(apartment_details_add_info_table)):
-            apartment_details_add_info_table[i] += apartment_details_details_table[i].replace(":",": ")
+           # temp_details = ', '.join(apartment_details_details_table[i])
+           try:
+               apartment_details_add_info_table[i] += (', ' + apartment_details_details_table[i].replace(":",": "))
+           except:
+               apartment_details_add_info_table[i]=apartment_details_add_info_table[i]
         return apartment_details_add_info_table
 
     def prepare_description_table(self, apartment_details_description_table: pd.DataFrame) -> pd.DataFrame:
@@ -274,11 +294,15 @@ class Preprocessing_Otodom:
                 language = 'pl'
               if language =='pl':
                 pl.append(" ".join(element))
-            
+
             description_splitted = wrap(" ".join(pl), 4000)
 
           else:
-            description_splitted = wrap(apartment_details_description_table[i], 4000)
+              try:
+                  description_splitted = wrap(apartment_details_description_table[i], 4000)
+              except:
+                  description_splitted = wrap(''.join(apartment_details_description_table[i]), 4000)
+
 
           for element in range(len(description_splitted)):
               desc_list[element] = description_splitted[element]
@@ -311,7 +335,7 @@ class Preprocessing_Otodom:
         otodom_table['latitude'] = self.apartment_details['lat']
         otodom_table['longitude'] = self.apartment_details['lng']
         otodom_table['link'] = self.apartment_details['link']
-        otodom_table['price'] = self.extract_price(self.remove_new_line_marks()['price'])
+        otodom_table['price'] = self.extract_price(self.apartment_details['price'])
         otodom_table['currency'] = self.apartment_details['currency']
         otodom_table['rooms'] = params_tables_otodom['Liczba pokoi']
         otodom_table['floors_number'] = params_tables_otodom['Liczba pięter']
@@ -339,3 +363,4 @@ if "__name__" == "__main__":
     otodom_table = otodom_preprocess.create_table()
     end_time = datetime.now()
     print('Duration: {}'.format(end_time - start_time))
+
