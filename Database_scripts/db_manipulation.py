@@ -222,14 +222,15 @@ class DatabaseManipulation:
 
     def replace_offers(self, removeLinks):
 
-        #Change value for inavtive links
-        conn = self.engine.connect()
-        queries_delete = "UPDATE " + self.table_name_offers + "SET [active] = 'No' WHERE [link] = '" + removeLinks + "'"
+        if len(removeLinks) > 0:
+            #Change value for inavtive links
+            conn = self.engine.connect()
+            queries_delete = "UPDATE " + self.table_name_offers + "SET [active] = 'No' WHERE [link] = '" + removeLinks + "'"
 
-        for query in queries_delete:
-            conn.execute(query)
+            for query in queries_delete:
+                conn.execute(query)
 
-        conn.close()
+            conn.close()
 
     def insert_offers(self, offers, insert_columns):
 
@@ -242,11 +243,12 @@ class DatabaseManipulation:
         # Verify corectness of column names
         if sum(offers.columns == insert_columns) == len(insert_columns):
             for split in splitted:
-                conn = self.engine.connect()
 
                 # Add observations
                 for index, row in offers[split[0]:split[1]].iterrows():
+                    print(row[16])
                     print(row)
+                    row[16] = ""
                     conn.execute("INSERT INTO " + self.table_name_offers + "\
                                          ([area],[description_1], [description_2], [description_3], [description_4],"
                                                                            " [latitude],[longitude],[link],[price],[currency], [rooms],"
