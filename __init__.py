@@ -15,12 +15,13 @@ from sqlalchemy import create_engine
 
 if __name__ == "__main__":
     # Database connection
+
     config = configparser.ConfigParser()
     config.read('Database_scripts/config.ini')
 
     database_manipulation = DatabaseManipulation(config = config, config_database = "DATABASE", table_name_links = "active_links",
                                                  table_name_offers = "preprocessing_offers", split_size = 1000)
-
+    '''
     #Morizon
     morizon_scraper = ScrapingMorizon(page = 'https://www.morizon.pl/do-wynajecia/mieszkania',page_name = 'https://www.morizon.pl',max_threads = 30)
     morizon_pages = morizon_scraper.get_pages()
@@ -38,6 +39,7 @@ if __name__ == "__main__":
                                                                   "year", "headers", "additional_info", "city",
                                                                   "address", "district", "voivodeship", "active",
                                                                   "scrape_date", "inactive_date", "pageName"])
+    '''
 
     #Otodom
     otodom_scraper = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=20)
@@ -61,6 +63,7 @@ if __name__ == "__main__":
     end_time = datetime.now()
     print('Duration: {}'.format(end_time - start_time))
     otodom_table=otodom_table.where(pd.notnull(otodom_table), None)
+    print(otodom_table)
     database_manipulation = DatabaseManipulation(config=config, config_database="DATABASE",
                                                  table_name_links="active_links",
                                                  table_name_offers="preprocessing_offers", split_size=1000)
