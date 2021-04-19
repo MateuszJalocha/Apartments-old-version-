@@ -255,9 +255,10 @@ class ScrapingOtodom(Scraper):
 
         # Scrape details
         for split in splitted:
+            print("zaczynamy")
             results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,
                                                       results_offers[split[0]:split[1]])
-
+            print("wyszlo")
             # Assign to variables missed links and scraped properly
             missed_details = [details for details in results_details if "www.otodom.pl" in details]
             results_details = self.flatten(
@@ -276,9 +277,9 @@ class ScrapingOtodom(Scraper):
             # Save scraped details as csv file
             results_details = [result for result in results_details if
                                (result != "Does not exist") & (result != None) & ("www.otodom.pl" not in result)]
-            results.append(pd.DataFrame(results_details))
+            results.append(results_details)
 
-        return pd.concat(results)
+        return pd.concat([pd.DataFrame(x) for x in results])
 
 
     # Verify weather there is possibility to extract specific information from json
@@ -316,7 +317,7 @@ class ScrapingOtodom(Scraper):
             else:
                 return self.extract_localization_information(obj, path, is_address, info_type)
         except:
-            return "None"
+            return None
 
     # Extract from jsob object target features information
     def extract_target_features_information(self, obj: Dict[str, str], path: List[str]) -> str:
@@ -411,7 +412,7 @@ class ScrapingOtodom(Scraper):
             else:
                 return [element.text for element in find_in if element.text != '']
         except:
-            return "None"
+            return None
 
     # Scraping details from offer
     def scraping_offers_details(self, link: str) -> Union[DefaultDict[str,str], str]:
@@ -438,25 +439,25 @@ class ScrapingOtodom(Scraper):
             # Title and subtitle
             title = self.extract_information(self.soup_find_information(soup=soup_details,
                                                               find_attr=['h1', 'class',
-                                                                         'css-46s0sq edo911a18']))
+                                                                         'css-46s0sq eu6swcv18']))
 
             subtitle = self.extract_information(self.soup_find_information(soup=soup_details,
                                                                  find_attr=['a', 'class',
-                                                                            'css-1qz7z11 eom7om61']))
+                                                                            'css-1qz7z11 e1nbpvi61']))
             price = self.extract_information(self.soup_find_information(soup=soup_details,
                                                               find_attr=['strong', 'class',
-                                                                         'css-srd1q3 edo911a17']))
+                                                                         'css-srd1q3 eu6swcv17']))
 
             # Details and description (h2)
             details = self.extract_information_otodom(self.soup_find_information(soup=soup_details,
                                                                        find_attr=['div', 'class',
-                                                                                  'css-1d9dws4 e1dlfs272']))
+                                                                                  'css-1d9dws4 egzohkh2']))
             description = self.extract_information_otodom(soup_details.findAll("p").copy(), True)
 
             # Additional information (h3)
             additional_info_headers = [header.text for header in soup_details.findAll("h3")]
             additional_info = self.extract_information_otodom(
-                soup_details("ul", attrs=["class", "css-13isnqa e9d1vc80"]).copy(), True)
+                soup_details("ul", attrs=["class", "css-13isnqa ex3yvbv0"]).copy(), True)
 
             # Information in json
             try:
@@ -501,13 +502,14 @@ class ScrapingOtodom(Scraper):
             except:
                 features = ["Area", "Build-year", "Building_floors_num", "Building_material", "Building_type",
                             "Construction_status", "Deposit", "Floor_no", "Heating", "Rent", "Rooms_num"]
-                lat = "None"
-                lng = "None"
-                address = "None"
-                voivodeship = "None"
-                district = "None"
+                lat = None
+                lng = None
+                price = np.NaN
+                address = None
+                voivodeship = None
+                district = None
                 for feature in features:
-                    offer_infos[feature] = "None"
+                    offer_infos[feature] = None
 
             # Assign information to dictionary
             offer_infos["city"] = city

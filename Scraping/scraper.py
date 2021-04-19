@@ -395,4 +395,4 @@ class Scraper:
             else:
                 return [info_part.string.strip() for info_part in find_in if (info_part.string != None)]
         except:
-            return "None"
+            return None
