@@ -55,19 +55,22 @@ create_activeLinks = "CREATE TABLE active_links (link_id INT IDENTITY PRIMARY KE
                                            link NVARCHAR(256) NOT NULL)"
 
 create_preprocessing_offers = "CREATE TABLE preprocessing_offers (offer_id INT IDENTITY PRIMARY KEY," \
-"area FLOAT (2)," \
-"description NVARCHAR (4000)," \
+"area FLOAT," \
+"description_1 NVARCHAR (4000)," \
+"description_2 NVARCHAR (4000)," \
+"description_3 NVARCHAR (4000)," \
+"description_4 NVARCHAR (4000)," \
 "latitude FLOAT," \
 "longitude FLOAT," \
 "link NVARCHAR (128)," \
-"price FLOAT (2)," \
+"price FLOAT," \
 "currency NVARCHAR(128)," \
-"rooms FLOAT," \
-"floors_number FLOAT," \
-"floor FLOAT," \
+"rooms NVARCHAR (128)," \
+"floors_number NVARCHAR (128)," \
+"floor NVARCHAR (128)," \
 "type_building NVARCHAR (128)," \
 "material_building NVARCHAR (128)," \
-"year FLOAT," \
+"year NVARCHAR (128)," \
 "headers NVARCHAR (256)," \
 "additional_info NVARCHAR (4000)," \
 "city NVARCHAR (128)," \
@@ -85,6 +88,15 @@ create_missing_links = "CREATE TABLE missing_links (link_id INT IDENTITY PRIMARY
 "link_type NVARCHAR (128) NOT NULL)"
 
 create_table(engine, create_activeLinks)
-conn.execute("DROP TABLE preprocessing_offers")
 create_table(engine, create_preprocessing_offers)
 create_table(engine, create_missing_links)
+
+#Database connection
+config = configparser.ConfigParser()
+config.read('Database_scripts/config.ini')
+
+engine = connect_database(config, "DATABASE")
+
+conn = engine.connect()
+conn.execute("DROP TABLE preprocessing_offers")
+conn.execute("DROP TABLE active_links")
