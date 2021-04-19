@@ -7,6 +7,7 @@ import os
 from datetime import datetime
 from textwrap import wrap
 from langdetect import detect
+'''
 start_time = datetime.now()
 
 path = '/home/mateusz/Apartments/dane_otodom_najnowsze/'
@@ -18,6 +19,7 @@ def load_files(filenames):
         yield pd.read_csv(path+filename)
 data = pd.concat(load_files(data_files), ignore_index=True,axis=0)
 apartments = data.copy().drop(['Unnamed: 0'],axis=1)
+'''
 '''
 apartments1 = pd.read_csv(path+'mieszkania503.csv',
                    index_col=0)
