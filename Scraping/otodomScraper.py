@@ -13,6 +13,7 @@ from scraper import Scraper
 from datetime import datetime
 import json
 from typing import Tuple, List, DefaultDict, Union, Dict
+import re
 
 class ScrapingOtodom(Scraper):
     """
@@ -60,6 +61,9 @@ class ScrapingOtodom(Scraper):
 
     extract_spatial_information(obj: Dict[str, str], path: List[str]) -> str:
         Extract from json object spatial information (eg. latitude, longitude)
+
+    remove_styling(info_list: List[str]) -> List[str]:
+        Remove styling substings
 
     extract_information_otodom(find_in: List[str], is_description: bool = False) -> Union[List[str], str]:
         Extract the information from the str (soup.find obj)
@@ -385,6 +389,27 @@ class ScrapingOtodom(Scraper):
 
         return obj[path[0]][path[1]][path[2]][path[3]][path[4]][path[5]]
 
+    # Remove styling substings
+    def remove_styling(self, info_list: List[str]) -> List[str]:
+        """ Remove styling substings (eg. .css.*?}, @media.*?})
+
+        Parameters
+        ----------
+        info_list: list
+            information from offer (eg. details, additional info)
+
+        Returns
+        ------
+        list
+            list without styling substings
+        """
+
+        info_list = [re.sub('.css.*?}', '', element) for element in info_list]
+        info_list = [re.sub('@media.*?}', '', element) for element in info_list]
+
+        return info_list
+
+    #Extract the information from the str (soup.find obj).
     def extract_information_otodom(self, find_in: List[str], is_description: bool = False) -> Union[List[str], str]:
         """Extract the information from the str (soup.find obj).
          If it is a description replace the html tags with newline characters, otherwise remove the empty strings from the list.
@@ -408,9 +433,13 @@ class ScrapingOtodom(Scraper):
                 # Replace html tags with new line tags
                 [elem.replace_with(elem.text + "\n\n") for element in find_in for elem in
                  element.find_all(["a", "p", "div", "h3", "br", "li"])]
-                return [element.text for element in find_in]
+                temp = [element.text for element in find_in]
+
+                return self.remove_styling(temp)
             else:
-                return [element.text for element in find_in if element.text != '']
+                temp = [element.text for element in find_in if element.text != '']
+
+                return self.remove_styling(temp)
         except:
             return None
 
