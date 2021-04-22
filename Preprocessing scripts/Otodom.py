@@ -91,6 +91,7 @@ class Preprocessing_Otodom:
         for information_type in information_types:
             for index in range(len(apartment_details)):
                 if type(apartment_details.loc[:, information_type][index])==list:
+                    apartment_details.loc[:, information_type][index] = list(filter(lambda x: x != "", apartment_details.loc[:, information_type][index]))
                     try:
                         apartment_details.loc[:, information_type][index] = ', '.join(apartment_details.loc[:, information_type][index])
                     except:
@@ -162,13 +163,13 @@ class Preprocessing_Otodom:
         prepared_table = []
         params_table = pd.DataFrame()
         for index,row in enumerate(table):
-            #temp_row = ', '.join(row)
-            try:
-                list_info = row.replace(":", ", ").split(", ")
-                to_append = dict([x for x in zip(*[iter(list_info)]*2)])
-                prepared_table.append(to_append)
-            except:
-                prepared_table.append(None)
+
+          try:
+            list_info = row.replace(":", ", ").replace(" ,","").split(", ")
+            to_append = dict([x for x in zip(*[iter(list_info)]*2)])
+            prepared_table.append(to_append)
+          except:
+              prepared_table.append(None)
 
         for i in range(len(prepared_table)):
             column = []
@@ -216,10 +217,6 @@ class Preprocessing_Otodom:
 
         currency = []
         for i in range(len(apartment_details_price_table)):
-       #   if apartment_details_price_table[i] == 'None':
-        #      apartment_details_price_table[i] = None
-         #     currency.append(None)
-          #else:
           try:
             filtered_str = filter(self.get_number, ''.join(apartment_details_price_table[i]))
             only_digit = "".join(filtered_str)
@@ -250,7 +247,6 @@ class Preprocessing_Otodom:
             data frame with additional information.
         """
         for i in range(len(apartment_details_add_info_table)):
-           # temp_details = ', '.join(apartment_details_details_table[i])
            try:
                apartment_details_add_info_table[i] += (', ' + apartment_details_details_table[i].replace(":",": "))
            except:
