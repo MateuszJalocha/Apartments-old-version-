@@ -288,14 +288,15 @@ class ScrapingMorizon(Scraper):
 
         results_offers_all = list()
         for split in splitted:
-            if len(split) == 1:
-                results_offers = self.scraping_all_links(self.scraping_offers_links,results_pages[split[0]:split[1]])
-            else:
-                results_offers = self.scraping_all_links(self.scraping_offers_links, results_pages)
+
+            # Scrape all offers
+            results_offers = self.scraping_all_links(self.scraping_offers_links,results_pages[split[0]:split[1]])
+
+            # Verify weather there are some missing offers
             missed_offers = [offers for offers in results_offers if "page" in offers]
             results_offers = [properties for properties in self.flatten(results_offers) if ("page" not in properties)]
 
-
+            # Scrape missing offers and join them with scraped before
             missed_offers_list = self.missed_links_all(missed_offers = missed_offers, func = self.missed_offers_pages, details = False, offers = True, func_pages_or_offers = self.scraping_offers_links)
             results_offers = self.join_missed_with_scraped(missed_offers_list,results_offers)
 
