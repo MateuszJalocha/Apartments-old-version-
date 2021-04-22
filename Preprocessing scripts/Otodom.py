@@ -91,6 +91,7 @@ class Preprocessing_Otodom:
         for information_type in information_types:
             for index in range(len(apartment_details)):
                 if type(apartment_details.loc[:, information_type][index])==list:
+                    apartment_details.loc[:, information_type][index] = list(filter(lambda x: x != "", apartment_details.loc[:, information_type][index]))
                     try:
                         apartment_details.loc[:, information_type][index] = ', '.join(apartment_details.loc[:, information_type][index])
                     except:
@@ -162,13 +163,13 @@ class Preprocessing_Otodom:
         prepared_table = []
         params_table = pd.DataFrame()
         for index,row in enumerate(table):
-            #temp_row = ', '.join(row)
-            try:
-                list_info = row.replace(":", ", ").split(", ")
-                to_append = dict([x for x in zip(*[iter(list_info)]*2)])
-                prepared_table.append(to_append)
-            except:
-                prepared_table.append(None)
+
+          try:
+            list_info = row.replace(":", ", ").replace(" ,","").split(", ")
+            to_append = dict([x for x in zip(*[iter(list_info)]*2)])
+            prepared_table.append(to_append)
+          except:
+              prepared_table.append(None)
 
         for i in range(len(prepared_table)):
             column = []
@@ -216,10 +217,6 @@ class Preprocessing_Otodom:
 
         currency = []
         for i in range(len(apartment_details_price_table)):
-       #   if apartment_details_price_table[i] == 'None':
-        #      apartment_details_price_table[i] = None
-         #     currency.append(None)
-          #else:
           try:
             filtered_str = filter(self.get_number, ''.join(apartment_details_price_table[i]))
             only_digit = "".join(filtered_str)
@@ -229,15 +226,10 @@ class Preprocessing_Otodom:
             else:
                 currency.append(''.join(apartment_details_price_table[i]).split()[-1])
                 apartment_details_price_table[i] = float(only_digit.replace(",", "."))
-
           except:
-            if apartment_details_price_table[i] == "" or apartment_details_price_table[i] == None:
-              apartment_details_price_table[i] = None
-              currency.append(None)
-            else:
-              currency.append(''.join(apartment_details_price_table[i]).split()[-1])
-              apartment_details_price_table[i] = float(apartment_details_price_table[i].replace(",", "."))
-
+            apartment_details_price_table[i] = None
+            currency.append(None)
+           
         self.apartment_details['currency'] = currency
         return apartment_details_price_table
 
@@ -255,7 +247,6 @@ class Preprocessing_Otodom:
             data frame with additional information.
         """
         for i in range(len(apartment_details_add_info_table)):
-           # temp_details = ', '.join(apartment_details_details_table[i])
            try:
                apartment_details_add_info_table[i] += (', ' + apartment_details_details_table[i].replace(":",": "))
            except:
@@ -339,12 +330,30 @@ class Preprocessing_Otodom:
         otodom_table['link'] = self.apartment_details['link']
         otodom_table['price'] = self.extract_price(self.apartment_details['price'])
         otodom_table['currency'] = self.apartment_details['currency']
-        otodom_table['rooms'] = params_tables_otodom['Liczba pokoi']
-        otodom_table['floors_number'] = params_tables_otodom['Liczba pięter']
-        otodom_table['floor'] = params_tables_otodom['Piętro']
-        otodom_table['type_building'] = params_tables_otodom['Rodzaj zabudowy']
-        otodom_table['material_building'] = params_tables_otodom['Materiał budynku']
-        otodom_table['year'] = params_tables_otodom['Rok budowy']
+        try:
+          otodom_table['rooms'] = params_tables_otodom['Liczba pokoi']
+        except:
+          otodom_table['rooms'] = None
+        try:
+          otodom_table['floors_number'] = params_tables_otodom['Liczba pięter']
+        except:
+          otodom_table['floors_number'] = None
+        try:
+          otodom_table['floor'] = params_tables_otodom['Piętro']
+        except:
+          otodom_table['floor'] = None
+        try:
+          otodom_table['type_building'] = params_tables_otodom['Rodzaj zabudowy']
+        except:
+          otodom_table['type_building']=None
+        try:
+          otodom_table['material_building'] = params_tables_otodom['Materiał budynku']
+        except:
+          otodom_table['material_building'] = None
+        try:
+          otodom_table['year'] = params_tables_otodom['Rok budowy']
+        except:
+          otodom_table['year'] = None
         otodom_table['headers'] = self.apartment_details['additional_info_headers']
         otodom_table['additional_info'] = self.prepare_additional_info(apartment_details_add_info_table=self.apartment_details['additional_info'], apartment_details_details_table = self.apartment_details['details'])
         otodom_table['city'] = self.apartment_details['city']
@@ -356,7 +365,6 @@ class Preprocessing_Otodom:
         otodom_table['inactive_date'] = '-'
         otodom_table['pageName'] = 'Otodom'
         return otodom_table.replace({"": None})
-
 
 if "__name__" == "__main__":
     otodom_preprocess = Preprocessing_Otodom(apartment_details=apartments.where(pd.notnull(apartments),None), information_types=apartments.columns)
