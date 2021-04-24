@@ -396,10 +396,15 @@ class ScrapingMorizon(Scraper):
         try:
             #Title and subtitle
             title = self.extract_information(self.soup_find_information(soup = soup_details,
-                                                                   find_attr = ['div', 'class', 'summaryLocation clearfix row']).findAll("span"))
+                                                                   find_attr = ['div', 'class', 'summaryLocation clearfix row']).find_all("span"))
                
             subtitle = self.extract_information(self.soup_find_information(soup = soup_details,
                                                                     find_attr = ['div', 'class', 'summaryTypeTransaction clearfix']))
+
+            # Localization path
+            localization_path = self.extract_information(self.soup_find_information(soup=soup_details,
+                                                                          find_attr=['nav', 'class',
+                                                                                     'breadcrumbs']).find_all("span"))
             #Basic information
             price = self.information_exists(self.soup_find_information(soup = soup_details,
                                                                  find_attr = ['li', 'class', 'paramIconPrice']))
@@ -413,9 +418,9 @@ class ScrapingMorizon(Scraper):
                
             #Params
             params = soup_details.find(class_ = "propertyParams")
-            params_h3 = params.findAll("h3")
-            params_tables = params.findAll("table")
-            params_p = params.findAll("p")
+            params_h3 = [element.text for element in params.findAll("h3")]
+            params_tables = [element.text for element in params.findAll("table")]
+            params_p = [element.text for element in params.findAll("p")]
             
             #Description
             description = self.extract_information(self.soup_find_information(soup = soup_details,
@@ -432,6 +437,7 @@ class ScrapingMorizon(Scraper):
             #offer_infos["district"] = district.split("najnowsze/")[1].split("/")[1]
             offer_infos["title"] = title
             offer_infos["subtitle"] = subtitle
+            offer_infos["localization_path"] = localization_path
             offer_infos["price"] = price
             offer_infos["priceM2"] = priceM2
             offer_infos["area"] = area
