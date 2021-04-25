@@ -8,6 +8,7 @@ import urllib
 import numpy as np
 import pandas as pd
 import configparser #configuration from ini file
+from datetime import datetime
 
 class DatabaseManipulation:
     """
@@ -30,7 +31,8 @@ class DatabaseManipulation:
         Activate functions to replace and remove observations
     """
 
-    def __init__(self, config, config_database, table_name_links, table_name_offers, split_size):
+    def __init__(self, config, config_database, table_name_links, table_name_offers, table_name_to_scrape,
+                 table_name_process_stage, split_size):
         """
         Parameters
         ----------
@@ -42,6 +44,10 @@ class DatabaseManipulation:
             name of table with active links
         table_name_offers : str
             name of table with offers
+        table_name_to_scrape : str
+            name of table for links to scrape
+        table_name_process_stage : str
+            name of table for process stage
         split_size : int
             size of splits
         """
@@ -50,6 +56,8 @@ class DatabaseManipulation:
         self.config_database = config_database
         self.table_name_links = table_name_links
         self.table_name_offers = table_name_offers
+        self.table_name_to_scrape = table_name_to_scrape
+        self.table_name_process_stage = table_name_process_stage
         self.split_size = split_size
         self.engine = self.connect_database(config, config_database)
 
@@ -130,21 +138,11 @@ class DatabaseManipulation:
         str
             information that names are incorrect
         """
-        #Create splits to insert big dataset
-        splitted = self.create_split(dataFrame)
 
         #Verify corectness of column names
         if sum(dataFrame.columns == column_names) == len(column_names):
-            for split in splitted:
-                conn = self.engine.connect()
-
-                #Add observations
-                for index, row in dataFrame[split[0]:split[1]].iterrows():
-                    conn.execute("INSERT INTO "+self.table_name_links+"\
-                                 ([pageName],[link])\
-                                 Values (?, ?)\
-                                 ",(row["pageName"], row["link"]))
-                conn.close()
+            # Add observations
+            dataFrame.to_sql(self.table_name_links, schema='dbo', if_exists='append', con=self.engine, index=False)
         else:
             return "Add correct column names"
 
@@ -221,13 +219,16 @@ class DatabaseManipulation:
         conn.close()
 
     def replace_offers(self, removeLinks):
-
         if len(removeLinks) > 0:
             #Change value for inavtive links
             conn = self.engine.connect()
-            queries_delete = "UPDATE " + self.table_name_offers + "SET [active] = 'No' WHERE [link] = '" + removeLinks + "'"
+            queries_active = "UPDATE " + self.table_name_offers + " SET [active] = 'No' WHERE [link] = '" + removeLinks + "'"
+            queries_inactive_date =  "UPDATE " + self.table_name_offers + " SET [inactive_date] = "+datetime.today().strftime('%Y-%m-%d')+" WHERE [link] = '" + removeLinks + "'"
 
-            for query in queries_delete:
+            for query in queries_active:
+                conn.execute(query)
+
+            for query in queries_inactive_date:
                 conn.execute(query)
 
             conn.close()
@@ -242,31 +243,21 @@ class DatabaseManipulation:
 
         # Verify corectness of column names
         if sum(offers.columns == insert_columns) == len(insert_columns):
-            for split in splitted:
-
-                # Add observations
-                for index, row in offers[split[0]:split[1]].iterrows():
-                    print(row[16])
-                    print(row)
-                    row[16] = ""
-                    conn.execute("INSERT INTO " + self.table_name_offers + "\
-                                         ([area],[description_1], [description_2], [description_3], [description_4],"
-                                                                           " [latitude],[longitude],[link],[price],[currency], [rooms],"
-                                                                          "[floors_number],[floor],[type_building],[material_building],"
-                                                                          "[year],[headers],[additional_info],[city],[address],"
-                                                                          "[district],[voivodeship],[active], [scrape_date],"
-                                                                          "[inactive_date], [pageName])\
-                                         Values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)\
-                                         ", (row["area"], row["description_1"], row["description_2"], row["description_3"],
-                                             row["description_4"], row["latitude"], row["longitude"],
-                                             row["link"], row["price"], row["currency"], row["rooms"], row["floors_number"],
-                                             row["floor"],row["type_building"], row["material_building"], row["year"],
-                                             row["headers"], row["additional_info"], row["city"], row["address"],
-                                             row["district"], row["voivodeship"], row["active"], row["scrape_date"],
-                                             row["inactive_date"], row["pageName"]))
-                conn.close()
+            # Add observations
+            offers.to_sql(self.table_name_offers, schema='dbo', if_exists='append', con=self.engine, index=False)
         else:
             return "Add correct column names"
+
+    def insert_to_scrape_links(self, offers, page_name):
+
+        conn = self.engine.connect()
+
+        # Add observations
+        to_scrape = pd.DataFrame({"page_name": page_name, "link": offers["link"]})
+        to_scrape.to_sql(self.table_name_to_scrape, schema='dbo', if_exists='append', con=self.engine, index=False)
+
+        query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_offers] = 'T' WHERE [current_date] in (SELECT TOP (1) current_date FROM "+ self.table_name_process_stage +" ORDER BY [current_date] DESC)'"
+        conn.execute(query_pass)
 
     #Activate functions to replace and remove observations
     def push_to_database_links(self, activeLinks, page_name, insert_columns):
@@ -286,11 +277,14 @@ class DatabaseManipulation:
         #Find which links has to be scraped and which to removed
         scrape, remove = self.find_links_to_scrape(activeLinks = activeLinks, page_name = page_name)
 
-        #Delete and replace links
+        #Delete and insert links
         self.replace_links(newLinks = scrape, removeLinks = remove, page_name = page_name, insert_columns = insert_columns)
 
         #Update table with offers
         self.replace_offers(removeLinks = remove)
+
+        #Update process_table
+        self.insert_to_scrape_links(offers = scrape, page_name = page_name)
 
         return scrape
 
