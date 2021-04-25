@@ -121,7 +121,7 @@ class DatabaseManipulation:
         return splitted
 
     #Insert active links to database
-    def insert_active_links(self, dataFrame, column_names):
+    def insert_active_links(self, dataFrame):
         """Insert active links to database
 
         if column names are correct insert observations to table
@@ -130,8 +130,6 @@ class DatabaseManipulation:
         ----------
         dataFrame : pd.DataFrame
             data frame with observations
-        column_names : list
-            column names of table in which you want to insert new observations (without index column)
 
         Returns
         ------
@@ -139,12 +137,8 @@ class DatabaseManipulation:
             information that names are incorrect
         """
 
-        #Verify corectness of column names
-        if sum(dataFrame.columns == column_names) == len(column_names):
-            # Add observations
-            dataFrame.to_sql(self.table_name_links, schema='dbo', if_exists='append', con=self.engine, index=False)
-        else:
-            return "Add correct column names"
+        # Add observations
+        dataFrame.to_sql(self.table_name_links, schema='dbo', if_exists='append', con=self.engine, index=False)
 
     #Find new links to scrape and inactive to remove
     def find_links_to_scrape(self, activeLinks, page_name):
@@ -198,8 +192,6 @@ class DatabaseManipulation:
             List of links to be removed from the table
         page_name : str
             name of the website from which data were scraped
-        insert_columns : list
-            column names of table in which you want to insert new observations (without index column)
 
         """
 
@@ -214,7 +206,7 @@ class DatabaseManipulation:
 
         #Insert links
         newLinks = pd.DataFrame({"pageName": page_name, "link": newLinks["link"]})
-        self.insert_active_links(dataFrame = newLinks, column_names = insert_columns)
+        self.insert_active_links(dataFrame = newLinks)
 
         conn.close()
 
@@ -233,21 +225,6 @@ class DatabaseManipulation:
 
             conn.close()
 
-    def insert_offers(self, offers, insert_columns):
-
-        # Insert new offers to database
-        conn = self.engine.connect()
-
-        # Create splits to insert big dataset
-        splitted = self.create_split(offers)
-
-        # Verify corectness of column names
-        if sum(offers.columns == insert_columns) == len(insert_columns):
-            # Add observations
-            offers.to_sql(self.table_name_offers, schema='dbo', if_exists='append', con=self.engine, index=False)
-        else:
-            return "Add correct column names"
-
     def insert_to_scrape_links(self, offers, page_name):
 
         conn = self.engine.connect()
@@ -260,7 +237,7 @@ class DatabaseManipulation:
         conn.execute(query_pass)
 
     #Activate functions to replace and remove observations
-    def push_to_database_links(self, activeLinks, page_name, insert_columns):
+    def push_to_database_links(self, activeLinks, page_name):
         """Activate functions to replace and remove observations
 
         Parameters
@@ -269,8 +246,6 @@ class DatabaseManipulation:
             list of scraped links (offers are available at webpage)
         page_name : str
             name of the website from which data were scraped
-        insert_columns : list
-            column names of table in which you want to insert new observations (without index column)
 
         """
 
@@ -278,7 +253,7 @@ class DatabaseManipulation:
         scrape, remove = self.find_links_to_scrape(activeLinks = activeLinks, page_name = page_name)
 
         #Delete and insert links
-        self.replace_links(newLinks = scrape, removeLinks = remove, page_name = page_name, insert_columns = insert_columns)
+        self.replace_links(newLinks = scrape, removeLinks = remove, page_name = page_name)
 
         #Update table with offers
         self.replace_offers(removeLinks = remove)
@@ -288,6 +263,6 @@ class DatabaseManipulation:
 
         return scrape
 
-    def push_to_database_offers(self, offers, insert_columns):
+    def push_to_database_offers(self, offers):
 
-        self.insert_offers(offers = offers, insert_columns = insert_columns)
+        offers.to_sql(self.table_name_offers, schema='dbo', if_exists='append', con=self.engine, index=False)

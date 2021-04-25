@@ -7,7 +7,8 @@ sys.path.append('Preprocessing scripts')
 from morizonScraper import ScrapingMorizon
 from otodomScraper import ScrapingOtodom
 from db_manipulation import DatabaseManipulation
-from Otodom import Preprocessing_Otodom
+from otodom import Preprocessing_Otodom
+from morizon import Preprocessing_Morizon
 import pandas as pd
 import configparser
 import urllib
@@ -35,6 +36,12 @@ if __name__ == "__main__":
     morizon_scraped = morizon_scraper.get_details(offers=to_scrape, split_size=500)
 
     # Prepare offers to insert into table
+    morizon_scraped_c = morizon_scraped.copy().reset_index().drop(['index'], axis=1)
+    morizon_preprocess = Preprocessing_Morizon(apartment_details=morizon_scraped_c.where(pd.notnull(morizon_scraped_c), None),
+                                             information_types=morizon_scraped_c.columns)
+    morizon_table = morizon_preprocess.create_table()
+    morizon_table=morizon_table.where(pd.notnull(morizon_table), None)
+
 
     # Insert into table
     database_manipulation.push_to_database_offers(offers=morizon_scraped,
@@ -58,10 +65,8 @@ if __name__ == "__main__":
     # Scrape details
     otodom_scraped = otodom_scraper.get_details(offers=list(to_scrape["link"]),split_size=500)
 
-    otodom_scraped_c = otodom_scraped.copy().reset_index().drop(['index'],axis=1)
-
     # Prepare offers to insert into table
-    otodom_scraped_c=otodom_scraped_c.replace({"None": None}).replace({'', None})
+    otodom_scraped_c = otodom_scraped.copy().reset_index().drop(['index'], axis=1)
     otodom_preprocess = Preprocessing_Otodom(apartment_details=otodom_scraped_c.where(pd.notnull(otodom_scraped_c), None),
                                              information_types=otodom_scraped_c.columns)
     otodom_table = otodom_preprocess.create_table()
