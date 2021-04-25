@@ -474,7 +474,7 @@ class ScrapingMorizon(Scraper):
         try:
             return self.extract_information(details.em)
         except:
-            return "None"
+            return None
     
     #Verify if information about apartment location exists
     def spatial_data_exists(self, data: List[str], kind: str) -> Union[List[str], str]:
@@ -498,7 +498,7 @@ class ScrapingMorizon(Scraper):
         try:
             return data[kind]
         except:
-            return "None"
+            return None
 
 
 # Remove that
