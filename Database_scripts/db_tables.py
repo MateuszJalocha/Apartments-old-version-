@@ -76,23 +76,23 @@ create_preprocessing_offers = "CREATE TABLE preprocessing_offers (offer_id INT I
 "active NVARCHAR (128)," \
 "scrape_date NVARCHAR (128)," \
 "inactive_date NVARCHAR (128)," \
-"pageName NVARCHAR (128)), " \
+"pageName NVARCHAR (128), " \
 "description_1 NVARCHAR (4000)," \
 "description_2 NVARCHAR (4000)," \
 "description_3 NVARCHAR (4000)," \
-"description_4 NVARCHAR (4000)"
+"description_4 NVARCHAR (4000))"
 
 create_to_scrape = "CREATE TABLE to_scrape (link_id INT IDENTITY PRIMARY KEY," \
 "page_name NVARCHAR (128) NOT NULL," \
-"link NVARCHAR (128) NOT NULL"
+"link NVARCHAR (128) NOT NULL)"
 
 create_missing_links = "CREATE TABLE missing_links (missing_id INT IDENTITY PRIMARY KEY," \
 "page_name NVARCHAR (128) NOT NULL," \
 "link NVARCHAR (128) NOT NULL," \
 "link_type NVARCHAR (128) NOT NULL)"
 
-create_process_stage = "CREATE TABLE process_stage INT IDENTITY PRIMARY KEY," \
-"current_date NVARCHAR (128) NOT NULL," \
+create_process_stage = "CREATE TABLE process_stage (process_id INT IDENTITY PRIMARY KEY," \
+"curr_date NVARCHAR (128) NOT NULL," \
 "page_name NVARCHAR (128) NOT NULL," \
 "scraping_offers NVARCHAR (128) NOT NULL," \
 "scraping_details NVARCHAR (128) NOT NULL)"
