@@ -25,9 +25,9 @@ class DatabaseManipulation:
         Insert active links to database
     find_links_to_scrape(activeLinks, page_name, split_size = 1000):
         Find new links to scrape and inactive to remove
-    replace_links(newLinks, removeLinks, page_name, insert_columns, split_size = 1000):
+    replace_links(newLinks, removeLinks, page_name, split_size = 1000):
         Add new links to database and remove inactive
-    push_to_database(activeLinks, page_name, insert_columns, split_size = 1000):
+    push_to_database(activeLinks, page_name, split_size = 1000):
         Activate functions to replace and remove observations
     """
 
@@ -181,7 +181,7 @@ class DatabaseManipulation:
         return to_scrape, to_remove
 
     #Add new links to database and remove inactive
-    def replace_links(self, newLinks, removeLinks, page_name, insert_columns):
+    def replace_links(self, newLinks, removeLinks, page_name):
         """Find new links to scrape and inactive to remove
 
         Parameters
