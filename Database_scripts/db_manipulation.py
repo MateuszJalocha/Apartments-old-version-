@@ -161,7 +161,7 @@ class DatabaseManipulation:
 
         #Select active links from database
         conn = self.engine.connect()
-        links_database = pd.DataFrame.from_records(conn.execute("SELECT * FROM "+self.table_name_links+" WHERE [pageName] LIKE '"+page_name+"'").fetchall())
+        links_database = pd.DataFrame.from_records(conn.execute("SELECT * FROM "+self.table_name_links+" WHERE [page_name] LIKE '"+page_name+"'").fetchall())
 
         #Find links to scrape and remove
         activeLinks = pd.DataFrame({"link": activeLinks})
@@ -205,7 +205,7 @@ class DatabaseManipulation:
                 conn.execute(query)
 
         #Insert links
-        newLinks = pd.DataFrame({"pageName": page_name, "link": newLinks["link"]})
+        newLinks = pd.DataFrame({"page_name": page_name, "link": newLinks["link"]})
         self.insert_active_links(dataFrame = newLinks)
 
         conn.close()
