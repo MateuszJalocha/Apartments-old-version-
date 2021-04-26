@@ -7,31 +7,13 @@ import os
 from datetime import datetime
 from textwrap import wrap
 from langdetect import detect
-'''
-start_time = datetime.now()
-
-path = '/home/mateusz/Apartments/dane_otodom_najnowsze/'
-
-# Read filenames from the given path
-data_files = os.listdir(path)
-def load_files(filenames):
-    for filename in filenames:
-        yield pd.read_csv(path+filename)
-data = pd.concat(load_files(data_files), ignore_index=True,axis=0)
-apartments = data.copy().drop(['Unnamed: 0'],axis=1)
-'''
-'''
-apartments1 = pd.read_csv(path+'mieszkania503.csv',
-                   index_col=0)
-
-apartments2 = pd.read_csv(path+'mieszkania1007.csv',
-                    index_col=0)
-
-apartments3 = pd.read_csv(path+'mieszkania1511.csv',
-                    index_col=0)
-
-apartments = pd.concat([apartments1, apartments2, apartments3], ignore_index=True, axis=0)
-'''
+import pandas as pd
+import numpy as np
+import re
+import os
+from datetime import datetime
+from textwrap import wrap
+from langdetect import detect
 class Preprocessing_Otodom:
     """
         A class used to preprocess offers information from Otodom.pl.
@@ -272,7 +254,9 @@ class Preprocessing_Otodom:
 
         for i in range(len(apartment_details_description_table)):
           desc_list = [None, None, None, None]
-          if len(apartment_details_description_table[i]) > 16000:
+          if apartment_details_description_table[i]==None:
+                description_splitted = None
+          elif len(apartment_details_description_table[i]) > 16000:
 
             description = apartment_details_description_table[i]
             text = ' '.join(description.replace(",","").replace("-","").split(" ")).split()
@@ -297,8 +281,11 @@ class Preprocessing_Otodom:
                   description_splitted = wrap(''.join(apartment_details_description_table[i]), 4000)
 
 
-          for element in range(len(description_splitted)):
+          try:
+            for element in range(len(description_splitted)):
               desc_list[element] = description_splitted[element]
+          except:
+            desc_list[element] = None
 
           description_1.append(desc_list[0])
           description_2.append(desc_list[1])
@@ -321,10 +308,6 @@ class Preprocessing_Otodom:
         otodom_table = pd.DataFrame()
         params_tables_otodom = self.prepare_table_information(table=self.remove_new_line_marks()['details'])
         otodom_table['area'] = self.apartment_details['Area']
-        otodom_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
-        otodom_table['description_2'] = self.apartment_details['description_2']
-        otodom_table['description_3'] = self.apartment_details['description_3']
-        otodom_table['description_4'] = self.apartment_details['description_4']
         otodom_table['latitude'] = self.apartment_details['lat']
         otodom_table['longitude'] = self.apartment_details['lng']
         otodom_table['link'] = self.apartment_details['link']
@@ -364,6 +347,11 @@ class Preprocessing_Otodom:
         otodom_table['scrape_date'] = str(datetime.now().date())
         otodom_table['inactive_date'] = '-'
         otodom_table['pageName'] = 'Otodom'
+        otodom_table['offer_title'] = self.apartment_details['title']
+        otodom_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
+        otodom_table['description_2'] = self.apartment_details['description_2']
+        otodom_table['description_3'] = self.apartment_details['description_3']
+        otodom_table['description_4'] = self.apartment_details['description_4']
         return otodom_table.replace({"": None})
 
 if "__name__" == "__main__":
