@@ -39,8 +39,7 @@ if __name__ == "__main__":
     # Get links to scrape
     morizon_pages = morizon_scraper.get_pages()
     morizon_offers = morizon_scraper.get_offers(pages=morizon_pages, split_size=100)
-    to_scrape = database_manipulation.push_to_database_links(activeLinks=morizon_offers, page_name="Morizon",
-                                                             insert_columns=["pageName", "link"])
+    to_scrape = database_manipulation.push_to_database_links(activeLinks=morizon_offers, page_name="Morizon")
     # Scrape Details
     morizon_scraped = morizon_scraper.get_details(offers=to_scrape, split_size=500)
 
@@ -53,14 +52,7 @@ if __name__ == "__main__":
 
 
     # Insert into table
-    database_manipulation.push_to_database_offers(offers=morizon_scraped,
-                                                  insert_columns=["area", "description_1", "description_2",
-                                                                  "description_3", "description_4", "latitude", "longitude",
-                                                                  "link", "price", "currency", "rooms", "floors_number",
-                                                                  "floor", "type_building", "material_building",
-                                                                  "year", "headers", "additional_info", "city",
-                                                                  "address", "district", "voivodeship", "active",
-                                                                  "scrape_date", "inactive_date", "pageName"])
+    database_manipulation.push_to_database_offers(offers=morizon_scraped)
 
     # ===Otodom===
     otodom_scraper = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=20)
@@ -68,8 +60,7 @@ if __name__ == "__main__":
     # Get links to scrape
     otodom_pages = otodom_scraper.get_pages()
     otodom_offers = otodom_scraper.get_offers(pages=otodom_pages, split_size=100)
-    to_scrape = database_manipulation.push_to_database_links(activeLinks = otodom_offers, page_name = "Otodom",
-                                                 insert_columns = ["pageName", "link"])
+    to_scrape = database_manipulation.push_to_database_links(activeLinks = otodom_offers, page_name = "Otodom")
 
     # Scrape details
     otodom_scraped = otodom_scraper.get_details(offers=list(to_scrape["link"]),split_size=500)
@@ -82,11 +73,5 @@ if __name__ == "__main__":
     otodom_table=otodom_table.where(pd.notnull(otodom_table), None)
 
     # Insert offers into table
-    database_manipulation.push_to_database_offers(offers=otodom_table,insert_columns=["area", "description_1", "description_2",
-                                                                                 "description_3", "description_4","latitude","longitude",
-                                                                                 "link", "price", "currency","rooms", "floors_number",
-                                                                                 "floor", "type_building", "material_building",
-                                                                                 "year", "headers", "additional_info", "city",
-                                                                                 "address", "district", "voivodeship", "active",
-                                                                                 "scrape_date", "inactive_date", "pageName"])
+    database_manipulation.push_to_database_offers(offers=otodom_table)
 
