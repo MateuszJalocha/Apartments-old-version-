@@ -48,16 +48,29 @@ class Preprocessing_Morizon:
         self.information_types = information_types
 
     def extract_address(self, address_table):
+
          information_types = self.information_types
          apartment_details = self.apartment_details
-         voivodeship = apartment_details.loc[:,address_table].str[2]
-         city = apartment_details.loc[:,address_table].str[3]
-         district = apartment_details.loc[:,address_table].str[4]
-         street = [None if element[4] == element[-1] else element[-1] for element in apartment_details.loc[:,address_table]]
-
-         address = pd.DataFrame({'voivodeship':voivodeship, 'city':city, 'district':district, 'street':street})
+         voivodeship = address_table.str[2]
+         city = address_table.str[3]
+         district = []
+         street = []
+         for i in range(len(address_table)):
+           if len(address_table[i])<5:
+             district.append(None)
+             street.append(None)
+           elif address_table[i][4] == address_table[i][-1]:
+             district.append(address_table[i][4])
+             street.append(None)
+           else:
+             district.append(address_table[i][4])
+             street.append(address_table[i][-1])
+         address = pd.DataFrame({'voivodeship':voivodeship, 'city':city, 'district':district, 'street': street})
          return address
+    
+
     def extract_currency(self, price_table: pd.DataFrame) -> pd.DataFrame():
+
          currency =[]
          for index, value in enumerate(price_table):
            try:
@@ -65,7 +78,8 @@ class Preprocessing_Morizon:
            except:
              currency.append(None)
          return currency
-    def numeric_information(self) -> pd.DataFrame:
+
+    def numeric_information(self, numeric_columns) -> pd.DataFrame:
         """Change numeric information to float.
         Parameters
         ----------
@@ -78,15 +92,16 @@ class Preprocessing_Morizon:
         apartment_details: pd.DataFrame
             data frame where numeric information type was changed to float.
         """
-        information_types = ['price','area']
+        information_types = numeric_columns
         apartment_details = self.apartment_details
+        numeric_information = pd.DataFrame()
         for position,information_type in enumerate(information_types):
             try:  
-              apartment_details.loc[:,information_type]=apartment_details.loc[:,information_type].apply(lambda x: x[0].replace(",",".").replace(" ","").replace("~","")).astype(np.float)
+              numeric_information.loc[:,information_type]=apartment_details.loc[:,information_type].apply(lambda x: x[0].replace(",",".").replace(" ","").replace("~","")).astype(np.float)
             except:
-              apartment_details.loc[:,information_type]=apartment_details.loc[:,information_type]
+              numeric_information.loc[:,information_type]=apartment_details.loc[:,information_type]
 
-        return apartment_details
+        return numeric_information
     
     def remove_quotation_marks(self) -> pd.DataFrame:
         """Remove quotation marks from columns.
@@ -102,7 +117,8 @@ class Preprocessing_Morizon:
              data frame with information about apartments.
          """
         information_types = self.information_types
-        apartment_details = self.numeric_information()
+        apartment_details = self.apartment_details
+
         for information_type in information_types:
             for index in range(len(apartment_details)):
                 if type(apartment_details.loc[:, information_type][index])==list:
@@ -135,7 +151,7 @@ class Preprocessing_Morizon:
             for index in range(len(apartment_details)):
                 try:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][
-                        index].replace('\n\n\n\n', ', ').replace("\n",'')
+                        index].replace('\n\n\n\n', ', ').replace("\n",'').replace(",,",",")
                 except:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
         return apartment_details
@@ -204,7 +220,9 @@ class Preprocessing_Morizon:
 
         for i in range(len(apartment_details_description_table)):
           desc_list = [None, None, None, None]
-          if len(apartment_details_description_table[i]) > 16000:
+          if apartment_details_description_table[i]==None:
+            description_splitted = None
+          elif len(apartment_details_description_table[i]) > 16000:
 
             description = apartment_details_description_table[i]
             text = ' '.join(description.replace(",","").replace("-","").split(" ")).split()
@@ -228,9 +246,11 @@ class Preprocessing_Morizon:
               except:
                   description_splitted = wrap(''.join(apartment_details_description_table[i]), 4000)
 
-
-          for element in range(len(description_splitted)):
+          try:
+            for element in range(len(description_splitted)):
               desc_list[element] = description_splitted[element]
+          except:
+            desc_list[element] = None
 
           description_1.append(desc_list[0])
           description_2.append(desc_list[1])
@@ -253,16 +273,15 @@ class Preprocessing_Morizon:
             final preprocessing table with None instead of empty strings.
         """
         morizon_table = pd.DataFrame()
-        address = self.extract_address('localization_path')
+        address = self.extract_address(self.apartment_details['localization_path'])
         currency = self.extract_currency(price_table = self.apartment_details.price)
+        numeric = self.numeric_information(numeric_columns = ['price','area'])
         params_tables_morizon = self.prepare_table_information(table=self.remove_new_line_marks()['params_tables'])
-        #print(params_tables_morizon.columns)
-       # nana = self.numeric_information()
-        morizon_table["area"] = self.apartment_details.area
+        morizon_table["area"] = numeric.area
         morizon_table["latitude"] = self.apartment_details.lat.astype(np.float)
         morizon_table["longitude"] = self.apartment_details.lng.astype(np.float)
         morizon_table["link"] = self.apartment_details.link
-        morizon_table["price"] = self.apartment_details.price
+        morizon_table["price"] = numeric.price
         morizon_table["currency"] = currency
         morizon_table["rooms"] = self.apartment_details.rooms
         morizon_table["floors_number"] = params_tables_morizon["Liczba pięter"]
@@ -280,6 +299,7 @@ class Preprocessing_Morizon:
         morizon_table['scrape_date'] = str(datetime.now().date())
         morizon_table['inactive_date'] = '-'
         morizon_table['pageName'] = 'Morizon'
+        morizon_table['offer_title'] = self.apartment_details.title
         morizon_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
         morizon_table['description_2'] = self.apartment_details['description_2']
         morizon_table['description_3'] = self.apartment_details['description_3']
