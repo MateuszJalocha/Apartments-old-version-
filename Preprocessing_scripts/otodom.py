@@ -256,7 +256,6 @@ class Preprocessing_Otodom:
           if apartment_details_description_table[i]==None:
             description_splitted = None
           elif len(apartment_details_description_table[i]) > 16000:
-
             description = apartment_details_description_table[i]
             text = ' '.join(description.replace(",","").replace("-","").split(" ")).split()
             elements = [text[x:x+6] for x in range(0, len(text),6)]
