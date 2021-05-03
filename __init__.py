@@ -48,12 +48,13 @@ if __name__ == "__main__":
     morizon_scraped_c = morizon_scraped.copy().reset_index().drop(['index'], axis=1)
     morizon_preprocess = Preprocessing_Morizon(apartment_details=morizon_scraped_c.where(pd.notnull(morizon_scraped_c), None),
                                              information_types=morizon_scraped_c.columns)
+
     morizon_table = morizon_preprocess.create_table()
     morizon_table=morizon_table.where(pd.notnull(morizon_table), None)
 
 
     # Insert into table
-    database_manipulation.push_to_database_offers(offers=morizon_scraped)
+    database_manipulation.push_to_database_offers(offers=morizon_table)
 
     # ===Otodom===
     otodom_scraper = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=20)
