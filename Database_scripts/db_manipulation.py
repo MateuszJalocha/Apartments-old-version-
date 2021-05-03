@@ -229,12 +229,34 @@ class DatabaseManipulation:
 
         conn = self.engine.connect()
 
-        # Add observations
+        # Push observations
         to_scrape = pd.DataFrame({"page_name": page_name, "link": offers["link"]})
         to_scrape.to_sql(self.table_name_to_scrape, schema='dbo', if_exists='append', con=self.engine, index=False)
 
-        query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_offers] = 'T' WHERE [current_date] in (SELECT TOP (1) current_date FROM "+ self.table_name_process_stage +" ORDER BY [current_date] DESC)'"
+        query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_offers] = 'T' WHERE [curr_date] in (SELECT TOP (1) [curr_date] FROM "+ self.table_name_process_stage +" ORDER BY [curr_date] DESC)"
         conn.execute(query_pass)
+
+    def add_process_stage(self, page_name):
+
+        current_date = datetime.today().strftime('%Y-%m-%d')
+        # Which process number
+        conn = self.engine.connect()
+
+        query = "SELECT * FROM " + self.table_name_process_stage + " WHERE curr_date LIKE  '" + current_date + "'"
+        temp_table = conn.execute(query).fetchall()
+
+        if len(temp_table) == 0:
+            process_number = 1
+        else:
+            process_number = 2
+
+        process_stage = pd.DataFrame(
+            {"curr_date": [current_date], "process_number": process_number, "page_name": [page_name],
+             "scraping_offers": ["F"], "scraping_details": ["F"]})
+        process_stage.to_sql(self.table_name_process_stage, schema='dbo', if_exists='append', con=self.engine,
+                             index=False)
+
+        conn.close()
 
     #Activate functions to replace and remove observations
     def push_to_database_links(self, activeLinks, page_name):
@@ -248,6 +270,9 @@ class DatabaseManipulation:
             name of the website from which data were scraped
 
         """
+
+        #Create process stage observation
+        self.add_process_stage(page_name = page_name)
 
         #Find which links has to be scraped and which to removed
         scrape, remove = self.find_links_to_scrape(activeLinks = activeLinks, page_name = page_name)
@@ -265,4 +290,10 @@ class DatabaseManipulation:
 
     def push_to_database_offers(self, offers):
 
+        conn = self.engine.connect()
+
+        # Push observations
         offers.to_sql(self.table_name_offers, schema='dbo', if_exists='append', con=self.engine, index=False)
+
+        query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_details] = 'T' WHERE [curr_date] in (SELECT TOP (1) [curr_date] FROM "+ self.table_name_process_stage +" ORDER BY [curr_date] DESC)"
+        conn.execute(query_pass)
