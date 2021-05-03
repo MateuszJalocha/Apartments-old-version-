@@ -27,7 +27,7 @@ if __name__ == "__main__":
     # Database connection
 
     config = configparser.ConfigParser()
-    config.read('Database_scripts/config.ini')
+    config.read('/content/Apartments/Database_scripts/config.ini')
 
     database_manipulation = DatabaseManipulation(config = config, config_database = "DATABASE", table_name_links = "active_links",
                                                  table_name_offers = "preprocessing_offers", table_name_to_scrape = "to_scrape",
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     morizon_pages = morizon_scraper.get_pages()
     morizon_offers = morizon_scraper.get_offers(pages=morizon_pages, split_size=100)
     to_scrape = database_manipulation.push_to_database_links(activeLinks=morizon_offers, page_name="Morizon")
+
     # Scrape Details
     morizon_scraped = morizon_scraper.get_details(offers=to_scrape, split_size=500)
 
