@@ -49,8 +49,6 @@ class Preprocessing_Morizon:
 
     def extract_address(self, address_table):
 
-         information_types = self.information_types
-         apartment_details = self.apartment_details
          voivodeship = address_table.str[2]
          city = address_table.str[3]
          district = []
@@ -126,9 +124,9 @@ class Preprocessing_Morizon:
                     try:
                         apartment_details.loc[:, information_type][index] = ', '.join(apartment_details.loc[:, information_type][index])
                     except:
-                        apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
+                        continue
                 else:
-                    apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
+                    continue
         return apartment_details
 
 
@@ -153,7 +151,7 @@ class Preprocessing_Morizon:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][
                         index].replace('\n\n\n\n', ', ').replace("\n",'').replace(",,",",")
                 except:
-                    apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
+                    continue
         return apartment_details
 
     def prepare_table_information(self, table: pd.DataFrame) -> pd.DataFrame:
@@ -284,11 +282,26 @@ class Preprocessing_Morizon:
         morizon_table["price"] = numeric.price
         morizon_table["currency"] = currency
         morizon_table["rooms"] = self.apartment_details.rooms
-        morizon_table["floors_number"] = params_tables_morizon["Liczba pięter"]
-        morizon_table["floor"] = self.extract_floor(params_tables_morizon['Piętro'])
-        morizon_table["type_building"] = params_tables_morizon["Typ budynku"]
-        morizon_table["material_building"] = params_tables_morizon["Materiał budowlany"]
-        morizon_table["year"] = params_tables_morizon["Rok budowy"]
+        try:
+          morizon_table["floors_number"] = params_tables_morizon["Liczba pięter"]
+        except: 
+          morizon_table["floors_number"] = None
+        try:
+          morizon_table["floor"] = self.extract_floor(params_tables_morizon['Piętro'])
+        except:
+          morizon_table["floor"] = None
+        try:
+          morizon_table["type_building"] = params_tables_morizon["Typ budynku"]
+        except:
+          morizon_table["type_building"] = None
+        try:
+          morizon_table["material_building"] = params_tables_morizon["Materiał budowlany"]
+        except: 
+          morizon_table["material_building"] = None
+        try:
+          morizon_table["year"] = params_tables_morizon["Rok budowy"]
+        except:
+          morizon_table["year"] =None
         morizon_table["headers"] = self.apartment_details.params_h3
         morizon_table["additional_info"] = self.apartment_details.params_p
         morizon_table['city'] = address['city']
@@ -298,7 +311,7 @@ class Preprocessing_Morizon:
         morizon_table['active'] = 'Yes'
         morizon_table['scrape_date'] = str(datetime.now().date())
         morizon_table['inactive_date'] = '-'
-        morizon_table['page_name'] = 'Morizon'
+        morizon_table['pageName'] = 'Morizon'
         morizon_table['offer_title'] = self.apartment_details.title
         morizon_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
         morizon_table['description_2'] = self.apartment_details['description_2']

@@ -77,9 +77,9 @@ class Preprocessing_Otodom:
                     try:
                         apartment_details.loc[:, information_type][index] = ', '.join(apartment_details.loc[:, information_type][index])
                     except:
-                        apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
+                        continue
                 else:
-                    apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
+                    continue
         return apartment_details
 
 
@@ -102,8 +102,7 @@ class Preprocessing_Otodom:
             try:
               [float(apartment_details.loc[:, information_type][index]) for index in range(len(apartment_details))]
             except:
-              if information_type != information_types[-1]:
-                information_type = information_types[position+1]
+              continue
         return apartment_details
 
 
@@ -128,7 +127,7 @@ class Preprocessing_Otodom:
                     apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][
                         index].replace('\n\n', ', ').replace(', ,', ',').replace('\\xa0',' ')
                 except:
-                    apartment_details.loc[:, information_type][index] = apartment_details.loc[:, information_type][index]
+                    continue
         return apartment_details
 
     def prepare_table_information(self, table: pd.DataFrame) -> pd.DataFrame:
@@ -232,7 +231,7 @@ class Preprocessing_Otodom:
            try:
                apartment_details_add_info_table[i] += (', ' + apartment_details_details_table[i].replace(":",": "))
            except:
-               apartment_details_add_info_table[i]=apartment_details_add_info_table[i]
+               continue
         return apartment_details_add_info_table
 
     def prepare_description_table(self, apartment_details_description_table: pd.DataFrame) -> pd.DataFrame:
@@ -255,9 +254,8 @@ class Preprocessing_Otodom:
         for i in range(len(apartment_details_description_table)):
           desc_list = [None, None, None, None]
           if apartment_details_description_table[i]==None:
-                description_splitted = None
+            description_splitted = None
           elif len(apartment_details_description_table[i]) > 16000:
-
             description = apartment_details_description_table[i]
             text = ' '.join(description.replace(",","").replace("-","").split(" ")).split()
             elements = [text[x:x+6] for x in range(0, len(text),6)]
@@ -346,7 +344,7 @@ class Preprocessing_Otodom:
         otodom_table['active'] = 'Yes'
         otodom_table['scrape_date'] = str(datetime.now().date())
         otodom_table['inactive_date'] = '-'
-        otodom_table['page_name'] = 'Otodom'
+        otodom_table['pageName'] = 'Otodom'
         otodom_table['offer_title'] = self.apartment_details['title']
         otodom_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
         otodom_table['description_2'] = self.apartment_details['description_2']
