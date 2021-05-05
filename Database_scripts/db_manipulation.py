@@ -227,14 +227,17 @@ class DatabaseManipulation:
 
     def insert_to_scrape_links(self, offers, page_name):
 
-        conn = self.engine.connect()
+        engine = self.connect_database(config, config_database)
+        conn = engine.connect()
 
         # Push observations
         to_scrape = pd.DataFrame({"page_name": page_name, "link": offers["link"]})
-        to_scrape.to_sql(self.table_name_to_scrape, schema='dbo', if_exists='append', con=self.engine, index=False)
+        to_scrape.to_sql(self.table_name_to_scrape, schema='dbo', if_exists='append', con=engine, index=False)
 
         query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_offers] = 'T' WHERE [curr_date] in (SELECT TOP (1) [curr_date] FROM "+ self.table_name_process_stage +" ORDER BY [curr_date] DESC)"
         conn.execute(query_pass)
+
+        conn.close()
 
     def add_process_stage(self, page_name):
 
