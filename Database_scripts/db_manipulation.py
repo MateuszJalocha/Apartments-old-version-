@@ -227,7 +227,7 @@ class DatabaseManipulation:
 
     def insert_to_scrape_links(self, offers, page_name):
 
-        engine = self.connect_database(config, config_database)
+        engine = self.connect_database(self.config, self.config_database)
         conn = engine.connect()
 
         # Push observations
