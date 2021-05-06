@@ -42,7 +42,7 @@ if __name__ == "__main__":
     to_scrape = database_manipulation.push_to_database_links(activeLinks=morizon_offers, page_name="Morizon")
 
     # Scrape Details
-    morizon_scraped = morizon_scraper.get_details(offers=to_scrape, split_size=500)
+    morizon_scraped = morizon_scraper.get_details(offers=list(to_scrape["link"]), split_size=500)
 
     # Prepare offers to insert into table
     morizon_scraped_c = morizon_scraped.copy().reset_index().drop(['index'], axis=1)
