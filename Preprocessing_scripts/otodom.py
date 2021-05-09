@@ -324,11 +324,11 @@ class Preprocessing_Otodom:
         except:
           otodom_table['floor'] = None
         try:
-          otodom_table['type_building'] = params_tables_otodom['Rodzaj zabudowy']
+          otodom_table['type_building'] = params_tables_otodom['Rodzaj zabudowy'].str.lower()
         except:
           otodom_table['type_building']=None
         try:
-          otodom_table['material_building'] = params_tables_otodom['Materiał budynku']
+          otodom_table['material_building'] = params_tables_otodom['Materiał budynku'].str.lower()
         except:
           otodom_table['material_building'] = None
         try:
