@@ -168,9 +168,8 @@ class Preprocessing_Morizon:
         prepared_table = []
         params_table = pd.DataFrame()
         for index,row in enumerate(table):
-
           try:
-            list_info = row.replace(" ,",", ").replace(":", ", ").replace(" ,","").split(", ")
+            list_info = row.replace(":", " ,").split(" ,")
             without_spaces = [s.strip() for s in list_info]
             to_append = dict([x for x in zip(*[iter(without_spaces)]*2)])
             prepared_table.append(to_append)
@@ -189,6 +188,26 @@ class Preprocessing_Morizon:
             params_table = pd.concat([params_table, df_temp], ignore_index=True)
 
         return params_table.where(pd.notnull(params_table),None)
+
+    def prepare_additional_info(self, apartment_details_add_info_table: pd.DataFrame, apartment_details_details_table: pd.DataFrame) -> pd.DataFrame:
+        """Join additional information and details to additional information.
+        Parameters
+        ----------
+        apartment_details_add_info_table: pd.DataFrame
+            column with additional information.
+        apartment_details_details_table: pd.DataFrame
+            column with details information.
+        Returns
+        ------
+        apartment_details_add_info_table: pd.DataFrame
+            data frame with additional information.
+        """
+        for i in range(len(apartment_details_add_info_table)):
+           try:
+               apartment_details_add_info_table[i] += (', ' + apartment_details_details_table[i].replace(":",": "))
+           except:
+               continue
+        return apartment_details_add_info_table
 
     def extract_floor(self, floor_table):
           for i in range(len(floor_table)):
@@ -291,19 +310,19 @@ class Preprocessing_Morizon:
         except:
           morizon_table["floor"] = None
         try:
-          morizon_table["type_building"] = params_tables_morizon["Typ budynku"]
+          morizon_table["type_building"] = params_tables_morizon["Typ budynku"].str.lower()
         except:
           morizon_table["type_building"] = None
         try:
-          morizon_table["material_building"] = params_tables_morizon["Materiał budowlany"]
+          morizon_table["material_building"] = params_tables_morizon["Materiał budowlany"].str.lower()
         except: 
           morizon_table["material_building"] = None
         try:
           morizon_table["year"] = params_tables_morizon["Rok budowy"]
         except:
-          morizon_table["year"] =None
+          morizon_table["year"] = None
         morizon_table["headers"] = self.apartment_details.params_h3
-        morizon_table["additional_info"] = self.apartment_details.params_p
+        morizon_table["additional_info"] = self.prepare_additional_info(apartment_details_add_info_table=self.apartment_details['params_p'], apartment_details_details_table = self.apartment_details['params_tables'])
         morizon_table['city'] = address['city']
         morizon_table['address'] = address['street']
         morizon_table['district'] = address['district']
