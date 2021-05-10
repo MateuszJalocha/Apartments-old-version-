@@ -259,10 +259,8 @@ class ScrapingOtodom(Scraper):
 
         # Scrape details
         for split in splitted:
-            print("zaczynamy")
             results_details = self.scraping_all_links(self.scraping_offers_details_exceptions,
                                                       results_offers[split[0]:split[1]])
-            print("wyszlo")
             # Assign to variables missed links and scraped properly
             missed_details = [details for details in results_details if "www.otodom.pl" in details]
             results_details = self.flatten(
@@ -274,9 +272,8 @@ class ScrapingOtodom(Scraper):
             results_details = self.join_missed_with_scraped(missed_details_list, results_details)
 
             # Information for user
-            print("%s splits left" % (len(splitted) - (splitted.index(split) + 1)))
-            print("Tyle jest Does not exist: " + str(
-                len([result for result in results_details if result == "Does not exist"])))
+            #print("%s splits left" % (len(splitted) - (splitted.index(split) + 1)))
+
 
             # Save scraped details as csv file
             results_details = [result for result in results_details if
@@ -583,19 +580,3 @@ class ScrapingOtodom(Scraper):
         missed_links = [details for details in links if "www.otodom.pl" in details]
 
         return links, missed_links
-
-# Remove that
-if "__name__" == "__main__":
-
-
-    otodom_scraper = ScrapingOtodom(page='https://www.otodom.pl/wynajem/mieszkanie/', page_name='https://www.otodom.pl', max_threads=30)
-
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
-    otodom_pages = otodom_scraper.get_pages()
-    otodom_offers = otodom_scraper.get_offers(pages=otodom_pages[0:200], split_size=100)
-    otodom_details = otodom_scraper.get_details(offers=otodom_offers[0:50], split_size=100)
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)

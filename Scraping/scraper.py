@@ -291,11 +291,7 @@ class Scraper:
                 missed_scraped, missed_offers = func(missed_offers, offers, func_pages_or_offers)
             missed_offers_list.append(missed_scraped)
             n_times += 1
-            print("n_times: ", n_times)
-            print("restriction: ", restriction)
-            print("missed scraped: ", len(missed_scraped))
-            print("missed : ", len(missed_offers))
-        print("koniec while")
+
         return missed_offers_list
 
     # Join missed information with already scraped
@@ -315,7 +311,6 @@ class Scraper:
             scraped elements: details, and links e.g. pages
         """
 
-        print("Scraper, missed: ", missed)
         if len(missed) > 1:
             missed = [properties for properties in self.flatten(missed) if properties != None]
             scraped = np.concatenate([self.flatten(scraped), missed], axis=0)
@@ -324,7 +319,6 @@ class Scraper:
         elif len(missed) == 0:
             scraped = self.flatten(scraped)
 
-        print(len(scraped))
         return scraped
 
     # Try to connect with offer link, if it is not possible save link to global list
