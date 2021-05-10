@@ -364,9 +364,8 @@ class ScrapingMorizon(Scraper):
             results_details = self.join_missed_with_scraped(missed_details_list,results_details)
             
             #Information for user
-            print("%s splits left" %(len(splitted) - (splitted.index(split) + 1)))
-            print("Tyle jest Does not exist: " + str(len([result for result in results_details if result == "Does not exist"])))
-            
+            #print("%s splits left" %(len(splitted) - (splitted.index(split) + 1)))
+
             #Save scraped details as csv file
             results_details = [result for result in results_details if (result != "Does not exist") & (result != None) & ("www.morizon.pl" not in result)]
 
@@ -499,20 +498,3 @@ class ScrapingMorizon(Scraper):
             return data[kind]
         except:
             return None
-
-
-# Remove that
-if "__name__" == "__main__":
-
-
-    morizon_scraper = ScrapingMorizon(page='https://www.morizon.pl/do-wynajecia/mieszkania/', page_name='https://www.morizon.pl', max_threads=30)
-
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
-    morizon_pages = morizon_scraper.get_pages()
-    morizon_offers = morizon_scraper.get_offers(pages=morizon_pages, split_size=100)
-    to_scrape = morizon_scraper.get_details(offers=morizon_offers, split_size=100)
-    now = datetime.now()
-    current_time = now.strftime("%H:%M:%S")
-    print("Current Time =", current_time)
