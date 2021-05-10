@@ -228,12 +228,12 @@ class DatabaseManipulation:
     def insert_to_scrape_links(self, offers, page_name):
 
         engine = self.connect_database(self.config, self.config_database)
-        conn = engine.connect()
 
         # Push observations
         to_scrape = pd.DataFrame({"page_name": page_name, "link": offers["link"]})
         to_scrape.to_sql(self.table_name_to_scrape, schema='dbo', if_exists='append', con=engine, index=False)
 
+        conn = engine.connect()
         query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_offers] = 'T' WHERE [curr_date] in (SELECT TOP (1) [curr_date] FROM "+ self.table_name_process_stage +" ORDER BY [curr_date] DESC)"
         conn.execute(query_pass)
 
@@ -245,7 +245,7 @@ class DatabaseManipulation:
         # Which process number
         conn = self.engine.connect()
 
-        query = "SELECT * FROM " + self.table_name_process_stage + " WHERE curr_date LIKE  '" + current_date + "'"
+        query = "SELECT * FROM " + self.table_name_process_stage + " WHERE page_name LIKE '"+ page_name +"' curr_date LIKE  '" + current_date + "'"
         temp_table = conn.execute(query).fetchall()
 
         if len(temp_table) == 0:
@@ -260,6 +260,11 @@ class DatabaseManipulation:
                              index=False)
 
         conn.close()
+
+    def push_to_scrape(self, scrape, page_name):
+
+        # Update process_table
+        self.insert_to_scrape_links(offers=scrape, page_name=page_name)
 
     #Activate functions to replace and remove observations
     def push_to_database_links(self, activeLinks, page_name):
@@ -286,17 +291,13 @@ class DatabaseManipulation:
         #Update table with offers
         self.replace_offers(removeLinks = remove)
 
-        #Update process_table
-        self.insert_to_scrape_links(offers = scrape, page_name = page_name)
-
         return scrape
 
     def push_to_database_offers(self, offers):
 
-        conn = self.engine.connect()
-
         # Push observations
         offers.to_sql(self.table_name_offers, schema='dbo', if_exists='append', con=self.engine, index=False)
 
+        conn = self.engine.connect()
         query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_details] = 'T' WHERE [curr_date] in (SELECT TOP (1) [curr_date] FROM "+ self.table_name_process_stage +" ORDER BY [curr_date] DESC)"
         conn.execute(query_pass)
