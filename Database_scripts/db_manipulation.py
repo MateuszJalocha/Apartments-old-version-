@@ -245,7 +245,7 @@ class DatabaseManipulation:
         # Which process number
         conn = self.engine.connect()
 
-        query = "SELECT * FROM " + self.table_name_process_stage + " WHERE page_name LIKE '"+ page_name +"' curr_date LIKE  '" + current_date + "'"
+        query = "SELECT * FROM " + self.table_name_process_stage + " WHERE page_name LIKE '"+ page_name +"' and curr_date LIKE  '" + current_date + "'"
         temp_table = conn.execute(query).fetchall()
 
         if len(temp_table) == 0:
