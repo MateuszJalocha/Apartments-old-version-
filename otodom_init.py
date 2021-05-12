@@ -64,5 +64,5 @@ if __name__ == "__main__":
                                                  table_name_offers = "preprocessing_offers", table_name_to_scrape = "to_scrape",
                                                  table_name_process_stage = "process_stage", split_size = 1000)
 
-    database_manipulation.push_to_database_offers(offers=otodom_table)
+    database_manipulation.push_to_database_offers(offers=otodom_table, page_name = "Otodom")
 

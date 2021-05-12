@@ -204,10 +204,6 @@ class DatabaseManipulation:
             for query in queries_delete:
                 conn.execute(query)
 
-        #Insert links
-        newLinks = pd.DataFrame({"page_name": page_name, "link": newLinks["link"]})
-        self.insert_active_links(dataFrame = newLinks)
-
         conn.close()
 
     def replace_offers(self, removeLinks):
@@ -215,7 +211,7 @@ class DatabaseManipulation:
             #Change value for inavtive links
             conn = self.engine.connect()
             queries_active = "UPDATE " + self.table_name_offers + " SET [active] = 'No' WHERE [link] = '" + removeLinks + "'"
-            queries_inactive_date =  "UPDATE " + self.table_name_offers + " SET [inactive_date] = "+datetime.today().strftime('%Y-%m-%d')+" WHERE [link] = '" + removeLinks + "'"
+            queries_inactive_date =  "UPDATE " + self.table_name_offers + " SET [inactive_date] = '"+datetime.today().strftime('%Y-%m-%d')+"' WHERE [link] = '" + removeLinks + "'"
 
             for query in queries_active:
                 conn.execute(query)
@@ -293,7 +289,7 @@ class DatabaseManipulation:
 
         return scrape
 
-    def push_to_database_offers(self, offers):
+    def push_to_database_offers(self, offers, page_name):
 
         # Push observations
         offers.to_sql(self.table_name_offers, schema='dbo', if_exists='append', con=self.engine, index=False)
@@ -301,3 +297,10 @@ class DatabaseManipulation:
         conn = self.engine.connect()
         query_pass = "UPDATE " + self.table_name_process_stage + " SET [scraping_details] = 'T' WHERE [curr_date] in (SELECT TOP (1) [curr_date] FROM "+ self.table_name_process_stage +" ORDER BY [curr_date] DESC)"
         conn.execute(query_pass)
+
+        conn.close()
+
+        #Insert links
+        newLinks = pd.DataFrame({"page_name": page_name, "link": offers["link"]})
+        self.insert_active_links(dataFrame = newLinks)
+
