@@ -292,6 +292,7 @@ class Scraper:
             missed_offers_list.append(missed_scraped)
             n_times += 1
 
+
         return missed_offers_list
 
     # Join missed information with already scraped

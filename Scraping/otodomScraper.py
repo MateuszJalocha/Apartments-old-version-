@@ -14,6 +14,7 @@ from datetime import datetime
 import json
 from typing import Tuple, List, DefaultDict, Union, Dict
 import re
+import itertools
 
 class ScrapingOtodom(Scraper):
     """
@@ -231,7 +232,11 @@ class ScrapingOtodom(Scraper):
 
             results_offers_all.append(results_offers)
 
-        return self.flatten(results_offers_all)
+        #Remove .html ending
+        results_offers_all = self.flatten(results_offers_all)
+        results_offers_all = [element.split(".html")[0] for element in list(itertools.chain.from_iterable(results_offers_all))]
+
+        return results_offers_all
 
     # Get apartments details
     def get_details(self, split_size: int, offers: List = []) -> None:
@@ -553,7 +558,7 @@ class ScrapingOtodom(Scraper):
             offer_infos["lng"] = lng
             offer_infos["link"] = link
 
-            return (offer_infos)
+            return offer_infos
 
         except:
             return "Does not exist"
