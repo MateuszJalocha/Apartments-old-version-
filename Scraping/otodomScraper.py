@@ -234,7 +234,7 @@ class ScrapingOtodom(Scraper):
 
         #Remove .html ending
         results_offers_all = self.flatten(results_offers_all)
-        results_offers_all = [element.split(".html")[0] for element in list(itertools.chain.from_iterable(results_offers_all))]
+        results_offers_all = [element.split(".html")[0] for element in results_offers_all]
 
         return results_offers_all
 
