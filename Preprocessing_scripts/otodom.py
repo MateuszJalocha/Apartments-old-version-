@@ -344,7 +344,7 @@ class Preprocessing_Otodom:
         otodom_table['active'] = 'Yes'
         otodom_table['scrape_date'] = str(datetime.now().date())
         otodom_table['inactive_date'] = '-'
-        otodom_table['pageName'] = 'Otodom'
+        otodom_table['page_name'] = 'Otodom'
         otodom_table['offer_title'] = self.apartment_details['title']
         otodom_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
         otodom_table['description_2'] = self.apartment_details['description_2']

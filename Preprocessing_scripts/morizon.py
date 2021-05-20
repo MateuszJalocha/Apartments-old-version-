@@ -330,7 +330,7 @@ class Preprocessing_Morizon:
         morizon_table['active'] = 'Yes'
         morizon_table['scrape_date'] = str(datetime.now().date())
         morizon_table['inactive_date'] = '-'
-        morizon_table['pageName'] = 'Morizon'
+        morizon_table['page_name'] = 'Morizon'
         morizon_table['offer_title'] = self.apartment_details.title
         morizon_table['description_1'] = self.prepare_description_table(self.apartment_details['description'])
         morizon_table['description_2'] = self.apartment_details['description_2']
