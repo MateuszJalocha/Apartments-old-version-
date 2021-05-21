@@ -233,8 +233,16 @@ class ScrapingOtodom(Scraper):
             results_offers_all.append(results_offers)
 
         #Remove .html ending
-        results_offers_all = self.flatten(results_offers_all)
-        results_offers_all = [element.split(".html")[0] for element in results_offers_all]
+        try:
+            results_offers = results_offers.tolist()
+            results_offers_all.append(results_offers)
+        except:
+            results_offers_all.append(results_offers)
+
+        try:
+            results_offers_all = [element.split(".html")[0] for element in results_offers_all]
+        except:
+            results_offers_all = [element.split(".html")[0] for element in np.concatenate(results_offers_all, axis=0)]
 
         return results_offers_all
 
